@@ -1,5 +1,7 @@
 # 📬 ReachMate
 
+<img width="2144" alt="reachmate-dashboard" src="https://github.com/user-attachments/assets/839b4fad-dd2c-4ec6-a587-6441087edfe2" />
+
 ReachMate is a modern, developer-friendly email delivery platform designed to help startups, indie hackers, and businesses send beautiful, functional emails with ease.
 
 Built with performance, customization, and simplicity in mind, ReachMate offers tools for sending confirmation emails, password reset links, newsletters, and more — all while maintaining full control over your branding.
