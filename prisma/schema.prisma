@@ -1,0 +1,45 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+        
+
+model Client {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  email     String
+  company   String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@map("clients")
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@map("email_template")
+}
+
+model SentEmail {
+  id        String   @id @default(cuid())
+  userId    String
+  clientId  String
+  subject   String
+  body      String
+  sentAt    DateTime @default(now())
+
+  @@map("sent_email")
+}
