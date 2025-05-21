@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Dispatch, ReactNode, SetStateAction, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import RichTextEditor from "@/components/ui/rich-text-editor";
 import { useAuthStore } from "@/zustand/auth.store";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { useTemplateStore } from "@/zustand/template.store";
 
 // Template variables
 const templateVariables = [
@@ -49,8 +50,13 @@ type FormValues = {
   content: string;
 };
 
-export function CreateTemplateDialog() {
-  const [open, setOpen] = React.useState(false);
+type Props = {
+  open: boolean;
+  setOpen: Dispatch<SetStateAction<boolean>>;
+  trigger: ReactNode;
+};
+
+export function CreateTemplateDialog({ open, setOpen, trigger }: Props) {
   const [step, setStep] = React.useState(1);
   const [activeTab, setActiveTab] = React.useState("edit");
   const { user } = useAuthStore();
@@ -60,6 +66,8 @@ export function CreateTemplateDialog() {
   const [tags, setTags] = useState<
     { id: string; name: string; count: number }[]
   >([]);
+
+  const { selectedTemplate } = useTemplateStore();
 
   const {
     register,
@@ -83,22 +91,44 @@ export function CreateTemplateDialog() {
 
   const onSubmit = async (data: FormValues) => {
     try {
-      const { error } = await supabase.from("template").insert({
-        subject: data.templateName,
-        description: data.description,
-        body: data.content,
-        categoryId: data.categoryId,
-        tagId: data.tagId,
-        senderId: user?.id,
-      });
+      if (!selectedTemplate) {
+        const { error } = await supabase.from("template").insert({
+          subject: data.templateName,
+          description: data.description,
+          body: data.content,
+          categoryId: data.categoryId,
+          tagId: data.tagId,
+          senderId: user?.id,
+        });
 
-      if (error) {
-        toast.error("Error creating template, try again later");
-        console.error(error);
-        return;
+        if (error) {
+          toast.error("Error creating template, try again later");
+          console.error(error);
+          return;
+        }
+
+        toast.success("Template created successfully");
+      } else {
+        const { error } = await supabase
+          .from("template")
+          .update({
+            subject: data.templateName,
+            description: data.description,
+            body: data.content,
+            categoryId: data.categoryId,
+            tagId: data.tagId,
+            senderId: user?.id,
+          })
+          .eq("id", selectedTemplate.id);
+
+        if (error) {
+          toast.error("Error creating template, try again later");
+          console.error(error);
+          return;
+        }
+
+        toast.success("Template updated successfully");
       }
-
-      toast.success("Template created successfully");
     } catch (error) {
       toast.error("Error creating template, try again later");
       console.error(error);
@@ -172,14 +202,21 @@ export function CreateTemplateDialog() {
     fetchTags();
   }, [user]);
 
+  React.useEffect(() => {
+    if (selectedTemplate) {
+      reset({
+        tagId: selectedTemplate.tag?.id,
+        categoryId: selectedTemplate.category?.id,
+        templateName: selectedTemplate.subject,
+        content: selectedTemplate.body,
+        description: selectedTemplate?.description || "",
+      });
+    }
+  }, [selectedTemplate]);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Template
-        </Button>
-      </DialogTrigger>
+      {trigger}
       <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle>Create New Email Template</DialogTitle>
@@ -335,7 +372,7 @@ export function CreateTemplateDialog() {
                 onClick={handleSubmit(onSubmit)}
                 disabled={!watchedContent?.trim()}
               >
-                Save Template
+                {selectedTemplate?.id ? "Edit Template" : "Save Template"}
               </Button>
             </DialogFooter>
           </>

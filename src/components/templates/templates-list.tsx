@@ -25,36 +25,9 @@ import { supabase } from "@/lib/supabase/client";
 import PreviewDialog from "./preview-dialog";
 import { toast } from "sonner";
 import { RealtimeChannel } from "@supabase/supabase-js";
-
-type Tag = {
-  id: string;
-  name: string;
-};
-
-type Category = {
-  id: string;
-  name: string;
-};
-
-type Template = {
-  id: string;
-  subject: string;
-  description: string | null;
-  body: string;
-  category: Category | null;
-  tag: Tag | null;
-  createdAt: string;
-  updatedAt: string;
-  usedCount?: number;
-};
-
-type DuplicationDto = {
-  subject: string;
-  description: string;
-  body: string;
-  categoryId: string;
-  tagId: string;
-};
+import { DuplicationDto, Template } from "@/types/template";
+import { useTemplateStore } from "@/zustand/template.store";
+import { CreateTemplateDialog } from "./create-template-dialog";
 
 export function TemplatesList() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -62,6 +35,8 @@ export function TemplatesList() {
   const [openPreview, setOpenPreview] = useState(false);
   const { viewMode } = useViewModeStore();
   const { user } = useAuthStore();
+  const { setSelectedTemplate } = useTemplateStore();
+  const [open, setOpen] = useState(false);
 
   const fetchTemplates = async () => {
     const { data, error } = await supabase
@@ -141,6 +116,11 @@ export function TemplatesList() {
       toast.dismiss("delete");
     }
   };
+
+  function handleEdit(template: Template) {
+    setSelectedTemplate(template);
+    setOpen(true);
+  }
 
   useEffect(() => {
     fetchTemplates();
@@ -265,76 +245,92 @@ export function TemplatesList() {
           onMouseEnter={() => setHoveredTemplate(template.id)}
           onMouseLeave={() => setHoveredTemplate(null)}
         >
-          {viewMode === "list" ? (
-            <>
-              <div className="w-1/3 border-r bg-gray-50 p-4 flex items-center">
-                <p className="text-sm text-gray-600 line-clamp-3">
-                  {getPlainTextPreview(template.body)}
+          {/* {viewMode === "list" ? (
+            <Card
+              key={template.id}
+              className={`group relative overflow-hidden border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex h-40 bg-white hover:bg-gray-50`}
+              onMouseEnter={() => setHoveredTemplate(template.id)}
+              onMouseLeave={() => setHoveredTemplate(null)}
+            >
+              <div className="w-1/3 border-r bg-gray-100 p-4 flex items-center justify-center">
+                <p className="text-sm text-gray-700 line-clamp-4 font-light italic">
+                  {getPlainTextPreview(template.body) || "No preview available"}
                 </p>
               </div>
               <div className="flex-1 flex flex-col">
                 <CardContent className="p-4 flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 line-clamp-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 pr-4">
+                      <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
                         {template.subject}
                       </h3>
                       {template.description && (
-                        <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
                           {template.description}
                         </p>
                       )}
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4 text-gray-500" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <PreviewDialog
-                          openPreview={openPreview}
-                          setOpenPreview={setOpenPreview}
-                          children={
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              onClick={() => setOpenPreview(true)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Preview
-                            </DropdownMenuItem>
-                          }
-                          content={template.body}
-                        />
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() =>
-                            duplicateTemplate({
-                              subject: template.subject,
-                              body: template.body,
-                              categoryId: template.category?.id || "",
-                              tagId: template.tag?.id || "",
-                              description: template.description || "",
-                            })
-                          }
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600 cursor-pointer"
-                          onClick={() => handleTemplateDelete(template.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div
+                      className={`flex items-center gap-2 transition-opacity duration-200 ${
+                        hoveredTemplate === template.id
+                          ? "opacity-100"
+                          : "opacity-0"
+                      }`}
+                    >
+                      <PreviewDialog
+                        openPreview={openPreview}
+                        setOpenPreview={setOpenPreview}
+                        children={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Preview"
+                            onClick={() => setOpenPreview(true)}
+                          >
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          </Button>
+                        }
+                        content={template.body}
+                      />
+                      <CreateTemplateDialog
+                        open={open}
+                        setOpen={setOpen}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Edit"
+                            onClick={() => handleEdit(template)}
+                          >
+                            <Edit className="h-4 w-4 text-gray-500" />
+                          </Button>
+                        }
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Duplicate"
+                        onClick={() =>
+                          duplicateTemplate({
+                            subject: template.subject,
+                            body: template.body,
+                            categoryId: template.category?.id || "",
+                            tagId: template.tag?.id || "",
+                            description: template.description || "",
+                          })
+                        }
+                      >
+                        <Copy className="h-4 w-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Delete"
+                        onClick={() => handleTemplateDelete(template.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="border-t bg-gray-50 px-4 py-2 flex items-center justify-between">
@@ -342,147 +338,171 @@ export function TemplatesList() {
                     {template.category && (
                       <Badge
                         variant="secondary"
-                        className="text-xs font-medium"
+                        className="text-xs font-medium bg-blue-100 text-blue-800"
                       >
                         {template.category.name}
                       </Badge>
                     )}
                     {template.tag && (
-                      <Badge variant="outline" className="text-xs font-medium">
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-medium border-green-200 text-green-800"
+                      >
                         {template.tag.name}
                       </Badge>
                     )}
                   </div>
                   <span className="text-xs text-gray-500">
-                    {new Date(template.createdAt).toLocaleDateString()}
+                    {new Date(template.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </span>
                 </CardFooter>
               </div>
-            </>
-          ) : (
-            <>
-              <CardContent className="p-0">
-                <div className="relative h-48 bg-gray-50 p-6 flex items-center justify-center border-b">
-                  {hoveredTemplate === template.id && (
-                    <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-200">
-                      <div className="flex gap-2">
-                        <PreviewDialog
-                          openPreview={openPreview}
-                          setOpenPreview={setOpenPreview}
-                          children={
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="bg-white hover:bg-gray-100"
-                              onClick={() => setOpenPreview(true)}
-                            >
-                              <Eye className="mr-1 h-4 w-4" />
-                              Preview
-                            </Button>
-                          }
-                          content={template.body}
-                        />
-                        <Button
-                          size="sm"
-                          className="bg-primary hover:bg-primary-dark"
-                        >
-                          <Edit className="mr-1 h-4 w-4" />
-                          Edit
-                        </Button>
-                      </div>
+            </Card>
+          ) : ( */}
+          <>
+            <CardContent className="p-0">
+              <div className="relative h-48 bg-gray-50 p-6 flex items-center justify-center border-b">
+                {hoveredTemplate === template.id && (
+                  <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-200">
+                    <div className="flex gap-2">
+                      <PreviewDialog
+                        openPreview={openPreview}
+                        setOpenPreview={setOpenPreview}
+                        children={
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="bg-white hover:bg-gray-100"
+                            onClick={() => setOpenPreview(true)}
+                          >
+                            <Eye className="mr-1 h-4 w-4" />
+                            Preview
+                          </Button>
+                        }
+                        content={template.body}
+                      />
+                      <CreateTemplateDialog
+                        open={open}
+                        setOpen={setOpen}
+                        trigger={
+                          <Button
+                            size="sm"
+                            className="bg-primary hover:bg-primary-dark"
+                            onClick={() => handleEdit(template)}
+                          >
+                            <Edit className="mr-1 h-4 w-4" />
+                            Edit
+                          </Button>
+                        }
+                      />
                     </div>
-                  )}
-                  <p className="text-sm text-gray-600 line-clamp-4 text-center">
-                    {getPlainTextPreview(template.body)}
+                  </div>
+                )}
+                <p className="text-sm text-gray-600 line-clamp-4 text-center">
+                  {getPlainTextPreview(template.body)}
+                </p>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-medium text-gray-900 line-clamp-1">
+                    {template.subject}
+                  </h3>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <PreviewDialog
+                        openPreview={openPreview}
+                        setOpenPreview={setOpenPreview}
+                        children={
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => setOpenPreview(true)}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Preview
+                          </DropdownMenuItem>
+                        }
+                        content={template.body}
+                      />
+                      <CreateTemplateDialog
+                        open={open}
+                        setOpen={setOpen}
+                        trigger={
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => handleEdit(template)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        }
+                      />
+
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() =>
+                          duplicateTemplate({
+                            subject: template.subject,
+                            body: template.body,
+                            categoryId: template.category?.id || "",
+                            tagId: template.tag?.id || "",
+                            description: template.description || "",
+                          })
+                        }
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-red-600 cursor-pointer"
+                        onClick={() => handleTemplateDelete(template.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                {template.description && (
+                  <p className="text-sm text-gray-500 line-clamp-2 mb-3">
+                    {template.description}
                   </p>
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-medium text-gray-900 line-clamp-1">
-                      {template.subject}
-                    </h3>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4 text-gray-500" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <PreviewDialog
-                          openPreview={openPreview}
-                          setOpenPreview={setOpenPreview}
-                          children={
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              onClick={() => setOpenPreview(true)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Preview
-                            </DropdownMenuItem>
-                          }
-                          content={template.body}
-                        />
-                        <DropdownMenuItem className="cursor-pointer">
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() =>
-                            duplicateTemplate({
-                              subject: template.subject,
-                              body: template.body,
-                              categoryId: template.category?.id || "",
-                              tagId: template.tag?.id || "",
-                              description: template.description || "",
-                            })
-                          }
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600 cursor-pointer"
-                          onClick={() => handleTemplateDelete(template.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  {template.description && (
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-                      {template.description}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {template.tag && (
-                      <Badge variant="outline" className="text-xs font-medium">
-                        {template.tag.name}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t bg-gray-50 px-4 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {template.category && (
-                    <div className="flex items-center gap-1">
-                      <FileText className="h-4 w-4 text-gray-400" />
-                      <span className="text-xs text-gray-500 font-medium">
-                        {template.category.name}
-                      </span>
-                    </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {template.tag && (
+                    <Badge variant="outline" className="text-xs font-medium">
+                      {template.tag.name}
+                    </Badge>
                   )}
                 </div>
-                <span className="text-xs text-gray-500">
-                  {new Date(template.createdAt).toLocaleDateString()}
-                </span>
-              </CardFooter>
-            </>
-          )}
+              </div>
+            </CardContent>
+            <CardFooter className="border-t bg-gray-50 px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {template.category && (
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <span className="text-xs text-gray-500 font-medium">
+                      {template.category.name}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <span className="text-xs text-gray-500">
+                {new Date(template.createdAt).toLocaleDateString()}
+              </span>
+            </CardFooter>
+          </>
+          {/* )} */}
         </Card>
       ))}
     </div>

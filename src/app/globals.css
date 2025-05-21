@@ -25,6 +25,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -41,6 +42,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --gradient-radial: radial-gradient(var(--tw-gradient-stops));
+  --gradient-conic: conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops));
 }
 
 :root {
@@ -60,6 +63,7 @@
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.982 0.018 155.826);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.723 0.219 149.579);
@@ -76,10 +80,12 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.723 0.219 149.579);
+  --secondary: 160 59% 28%;
+  --secondary-foreground: 0 0% 98%;
+  
 }
 
 .dark {
-  
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
@@ -95,6 +101,7 @@
   --accent: oklch(0.274 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.527 0.154 150.069);
@@ -127,6 +134,111 @@
   }
 }
 
+@layer utilities {
+  .bg-gradient-radial {
+    background-image: var(--gradient-radial);
+  }
+  .bg-gradient-conic {
+    background-image: var(--gradient-conic);
+  }
+  .rounded-sm {
+    border-radius: var(--radius-sm);
+  }
+  .rounded-md {
+    border-radius: var(--radius-md);
+  }
+  .rounded-lg {
+    border-radius: var(--radius-lg);
+  }
+  .accordion-down {
+    animation: accordion-down 0.2s ease-out;
+  }
+  .accordion-up {
+    animation: accordion-up 0.2s ease-out;
+  }
+}
+
+@layer components {
+  .animated-gradient {
+    background-size: 400% 400%;
+    animation: gradient 8s ease infinite;
+    transition: all 0.25s ease;
+  }
+  .animated-gradient:hover {
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+  .glassmorphism {
+    @apply bg-white/80 backdrop-blur-md;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  }
+  .dark .glassmorphism {
+    @apply bg-black/40 backdrop-blur-md;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .pattern-dots {
+    background-image: radial-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .sticky-nav {
+    @apply fixed top-0 z-50 w-full transition-all duration-300 ease-in-out;
+  }
+  .floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+  .floating-delay-1 {
+    animation: floating 3s ease-in-out 0.5s infinite;
+  }
+  .floating-delay-2 {
+    animation: floating 3s ease-in-out 1s infinite;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes floating {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
 
 .ql-editor {
   min-height: 200px;
@@ -150,12 +262,12 @@
   margin-bottom: 4px;
 }
 
-.template-content ul, 
+.template-content ul,
 .template-content ol {
   margin-left: 25px;
   padding-left: 0;
   margin-bottom: 4px;
-  list-style-type: disc; 
+  list-style-type: disc;
 }
 
 .template-content li {
@@ -217,7 +329,6 @@
   cursor: pointer;
 }
 
-/* Editor Container */
 .editor-container {
   width: 100%;
   margin: 0 auto;
@@ -270,7 +381,6 @@
   min-height: 200px;
   width: 100%;
   outline: none;
- 
 }
 
 .tiptap ul {

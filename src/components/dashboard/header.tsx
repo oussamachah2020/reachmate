@@ -15,7 +15,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
 import { useAuthStore } from "@/zustand/auth.store";
-import { useRouter } from "next/navigation";
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState("");

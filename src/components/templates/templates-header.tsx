@@ -17,6 +17,7 @@ import { useViewModeStore } from "@/zustand/global.store";
 export function TemplatesHeader() {
   const [searchQuery, setSearchQuery] = useState("");
   const { viewMode, setViewMode } = useViewModeStore();
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -24,7 +25,16 @@ export function TemplatesHeader() {
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
           Email Templates
         </h1>
-        <CreateTemplateDialog />
+        <CreateTemplateDialog
+          open={open}
+          setOpen={setOpen}
+          trigger={
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Template
+            </Button>
+          }
+        />
       </div>
 
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">
@@ -52,7 +62,7 @@ export function TemplatesHeader() {
             </SelectContent>
           </Select>
 
-          <div className="flex items-center rounded-md border bg-white p-1">
+          {/* <div className="flex items-center rounded-md border bg-white p-1">
             <Button
               variant={viewMode === "grid" ? "default" : "ghost"}
               size="icon"
@@ -69,7 +79,7 @@ export function TemplatesHeader() {
             >
               <List className="h-4 w-4" />
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
