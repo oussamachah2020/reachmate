@@ -6,7 +6,7 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 import { UpcomingScheduled } from "@/components/dashboard/upcoming-scheduled";
 
 export const metadata: Metadata = {
-  title: "Dashboard | MailPro",
+  title: "Dashboard | ReachMate",
   description: "Manage your email campaigns and communications",
 };
 

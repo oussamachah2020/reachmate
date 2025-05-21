@@ -1,5 +1,8 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { LoginDto, RegisterDto } from "@/types/auth";
+import { useAuthStore } from "@/zustand/auth.store";
+import { Gender } from "@prisma/client";
+import { Session, User } from "@supabase/supabase-js";
 
 async function signUpUser(data: RegisterDto) {
   try {
@@ -8,7 +11,7 @@ async function signUpUser(data: RegisterDto) {
       password: data.password,
       options: {
         data: {
-          username: data.fullName,
+          username: `${data.firstName} ${data.lastName}`,
         },
       },
     });
@@ -16,6 +19,14 @@ async function signUpUser(data: RegisterDto) {
     if (error) {
       return { error };
     }
+
+    await supabase.from("sender").insert({
+      id: signUpData.user?.id,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      gender: data.gender,
+    });
 
     return { user: signUpData?.user };
   } catch (error) {
@@ -60,7 +71,13 @@ async function signInUser(data: LoginDto) {
       return { success: false, data: error.message };
     }
 
-    return { success: true, data: signInData };
+    useAuthStore.setState(() => ({ session: signInData.session }));
+    useAuthStore.setState(() => ({ user: signInData.user }));
+
+    return {
+      success: true,
+      data: signInData as { user: User; session: Session },
+    };
   } catch (error) {
     return { error };
   }

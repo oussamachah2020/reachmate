@@ -88,7 +88,7 @@ export function Sidebar() {
             <div className="h-8 w-8 rounded-full bg-primary p-1.5">
               <Mail className="h-full w-full text-white" />
             </div>
-            <span className="text-lg font-bold">MailPro</span>
+            <span className="text-lg font-bold">ReachMate</span>
           </Link>
         </div>
         <nav className="space-y-1 px-3 py-4 overflow-y-auto">

@@ -55,7 +55,7 @@ const recentEmails = [
       "We're excited to announce the release of our new email templates feature...",
     sender: {
       name: "Product Team",
-      email: "product@mailpro.com",
+      email: "product@ReachMate.com",
       avatar: "/placeholder.svg?height=40&width=40",
     },
     date: "Jul 12",

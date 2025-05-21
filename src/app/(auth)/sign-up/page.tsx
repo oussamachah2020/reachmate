@@ -21,12 +21,21 @@ import { signUpUser } from "@/loaders/auth";
 import { RegisterDto } from "@/types/auth";
 import { toast } from "sonner";
 import Logo from "@/../public/logo-2.svg";
+import { Gender } from "@prisma/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SignUpFormData {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
+  gender: Gender;
   terms: boolean;
 }
 
@@ -39,6 +48,7 @@ export default function SignUpPage() {
     handleSubmit,
     formState: { errors },
     watch,
+    setValue,
   } = useForm<SignUpFormData>();
 
   const onSubmit = async (data: SignUpFormData) => {
@@ -48,7 +58,9 @@ export default function SignUpPage() {
       const registrationData: RegisterDto = {
         email: data.email,
         password: data.password,
-        fullName: `${data.firstName} ${data.lastName}`,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        gender: data.gender,
       };
 
       await signUpUser(registrationData);
@@ -225,6 +237,43 @@ export default function SignUpPage() {
                   <p className="text-xs text-gray-500">
                     Must be at least 8 characters with a number and a special
                     character
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <Label
+                  htmlFor="gender"
+                  className={errors.gender ? "text-destructive" : ""}
+                >
+                  Gender
+                </Label>
+                <Select
+                  defaultValue={watch("gender")}
+                  onValueChange={(val) => {
+                    if (val === "male") {
+                      setValue("gender", Gender.MALE);
+                    } else {
+                      setValue("gender", Gender.FEMALE);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id="gender"
+                    className={`w-full ${
+                      errors.gender ? "border-destructive" : ""
+                    }`}
+                  >
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.gender && (
+                  <p className="mt-1 text-xs text-destructive">
+                    {errors.gender.message}
                   </p>
                 )}
               </div>

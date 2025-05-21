@@ -1,0 +1,13 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# echo "🔍 Linting code..."
+# pnpm lint || exit 1
+
+# echo "🧠 Running type check..."
+# pnpm typecheck || exit 1
+
+echo "🏗️ Building app..."
+pnpm build || exit 1
+
+echo "✅ All checks passed. Proceeding with commit."

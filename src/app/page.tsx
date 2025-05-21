@@ -12,7 +12,7 @@ export default function IntroPage() {
             <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 p-2 shadow-md">
               <Mail className="h-full w-full text-white" />
             </div>
-            <span className="text-xl font-bold text-green-800">MailPro</span>
+            <span className="text-xl font-bold text-green-800">ReachMate</span>
           </div>
           <div className="flex items-center space-x-4">
             <Link
@@ -156,8 +156,8 @@ export default function IntroPage() {
               Loved by professionals
             </h2>
             <p className="mt-4 text-lg text-green-100">
-              Join thousands of professionals who trust MailPro for their email
-              communications.
+              Join thousands of professionals who trust ReachMate for their
+              email communications.
             </p>
 
             <div className="mt-10 flex flex-wrap justify-center gap-6">
@@ -167,7 +167,7 @@ export default function IntroPage() {
                 ))}
               </div>
               <p className="text-lg font-medium text-white">
-                "MailPro has transformed how I communicate with clients. It's
+                "ReachMate has transformed how I communicate with clients. It's
                 intuitive and powerful."
               </p>
               <div className="w-full">
@@ -187,7 +187,7 @@ export default function IntroPage() {
               Ready to get started?
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Join thousands of professionals who use MailPro to streamline
+              Join thousands of professionals who use ReachMate to streamline
               their email communications.
             </p>
             <div className="mt-8 flex flex-col justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0">
@@ -221,7 +221,9 @@ export default function IntroPage() {
               <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 p-1.5 shadow-md">
                 <Mail className="h-full w-full text-white" />
               </div>
-              <span className="text-lg font-bold text-green-800">MailPro</span>
+              <span className="text-lg font-bold text-green-800">
+                ReachMate
+              </span>
             </div>
             <div className="flex space-x-6">
               <Link
@@ -244,7 +246,7 @@ export default function IntroPage() {
               </Link>
             </div>
             <div className="text-sm text-gray-500">
-              © {new Date().getFullYear()} MailPro. All rights reserved.
+              © {new Date().getFullYear()} ReachMate. All rights reserved.
             </div>
           </div>
         </div>
