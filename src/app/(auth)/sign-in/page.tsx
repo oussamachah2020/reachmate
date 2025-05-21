@@ -29,7 +29,6 @@ interface SignInFormData {
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
 
   const {
     register,
@@ -46,7 +45,6 @@ export default function SignInPage() {
         return;
       }
       toast.success("Welcome! Let's get you back on track.");
-      router.replace("/home");
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong, try again !");

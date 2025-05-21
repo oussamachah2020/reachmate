@@ -9,37 +9,101 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
         
-
-model Client {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String
+model Sender {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName  String
+  lastName  String
   email     String
-  company   String?
-  notes     String?
+  avatar    String?
+  gender    Gender  @default(MALE)
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  EmailSent EmailSent[]
+  Template  Template[]
+  Category  Category[]
+  Tag       Tag[]
 
-  @@map("clients")
+  @@map("sender")
 }
 
-model EmailTemplate {
-  id        String   @id @default(cuid())
-  userId    String
-  name      String
-  subject   String
-  body      String
-  createdAt DateTime @default(now())
+model Receiver {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName  String
+  lastName  String
+  email     String
+  EmailSent EmailSent[]
 
-  @@map("email_template")
+  @@map("receiver")
 }
 
-model SentEmail {
-  id        String   @id @default(cuid())
-  userId    String
-  clientId  String
-  subject   String
-  body      String
-  sentAt    DateTime @default(now())
+model EmailSent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type       String?
+  sentAt     DateTime @default(now())
+  isRead     Boolean @default(false)
+  archived   Boolean @default(false)
 
-  @@map("sent_email")
+  senderId   String @db.Uuid
+  sender     Sender @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  receiverId String @db.Uuid
+  receiver   Receiver @relation(fields: [receiverId], references: [id])
+  
+  @@map("email_sent")
+}
+
+model Template {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  subject     String
+  body        String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now())
+  lastUsed    DateTime   @default(now())
+  usedCount   Int        @default(0)
+
+  senderId    String     @db.Uuid
+  sender      Sender     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  tagId       String?    @db.Uuid
+  tag         Tag?       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  categoryId  String?    @db.Uuid
+  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("template")
+}
+
+model Category {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now())
+  authorId    String     @db.Uuid
+  author      Sender     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  templates   Template[] // reverse relation
+
+  @@map("category")
+}
+
+model Tag {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now())
+  
+  authorId    String     @db.Uuid
+  author      Sender     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  templates   Template[] // reverse relation
+
+  @@map("tag")
+}
+
+
+enum Gender {
+  MALE
+  FEMALE
 }

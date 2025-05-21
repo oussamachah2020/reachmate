@@ -1,0 +1,7 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🏗️ Building app..."
+pnpm build || exit 1
+
+echo "✅ All checks passed. Proceeding with commit."

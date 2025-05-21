@@ -1,7 +1,11 @@
+import { Gender } from "@prisma/client";
+
 export interface RegisterDto {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
+  gender: Gender;
 }
 
 export interface LoginDto {
