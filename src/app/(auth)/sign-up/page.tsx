@@ -18,10 +18,9 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signUpUser } from "@/loaders/auth";
-import { RegisterDto } from "@/types/auth";
+import { Gender, RegisterDto } from "@/types/auth";
 import { toast } from "sonner";
 import Logo from "@/../public/logo-2.svg";
-import { Gender } from "@prisma/client";
 import {
   Select,
   SelectContent,

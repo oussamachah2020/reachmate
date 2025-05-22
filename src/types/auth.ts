@@ -1,4 +1,7 @@
-import { Gender } from "@prisma/client";
+export enum Gender {
+  MALE = "Male",
+  FEMALE = "Female",
+}
 
 export interface RegisterDto {
   firstName: string;
