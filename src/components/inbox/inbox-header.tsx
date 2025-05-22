@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import EmailSendingDialog from "./email-sending-dialog";
 
 export function InboxHeader() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +34,7 @@ export function InboxHeader() {
     <div className="border-b bg-white p-4">
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div className="flex items-center space-x-2">
+          <EmailSendingDialog />
           <h1 className="text-xl font-bold">Inbox</h1>
           <div className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
             12 unread

@@ -7,6 +7,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import EmailSendingDialog from "@/components/inbox/email-sending-dialog";
 
 export const metadata: Metadata = {
   title: "Inbox | ReachMate",
@@ -15,8 +16,9 @@ export const metadata: Metadata = {
 
 export default function InboxPage() {
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-[calc(100vh-4rem)] flex-col relative">
       <InboxHeader />
+      {/* Inbox layout */}
       <ResizablePanelGroup direction="horizontal" className="overflow-hidden">
         <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
           <EmailList />

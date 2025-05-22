@@ -56,9 +56,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useEffect } from "react";
 
 type Props = {
   value: string;
+  htmlContent?: string;
   onChange: React.Dispatch<React.SetStateAction<string>>;
   variables?: Array<{ name: string; value: string }>;
 };
@@ -111,6 +113,7 @@ const CustomTextStyle = TextStyle.extend({
 
 const RichTextEditor = ({
   value,
+  htmlContent,
   onChange,
   variables = defaultVariables,
 }: Props) => {
@@ -161,6 +164,12 @@ const RichTextEditor = ({
   const insertVariable = (variableText: string) => {
     editor?.chain().focus().insertContent(variableText).run();
   };
+
+  useEffect(() => {
+    if (editor && htmlContent) {
+      editor.commands.setContent(htmlContent, false); // false = do not emit transaction
+    }
+  }, [htmlContent, editor]);
 
   if (!editor) return null;
 
