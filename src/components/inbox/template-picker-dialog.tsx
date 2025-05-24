@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { FileTextIcon, LoaderCircle } from "lucide-react";
 
 type Props = {
-  onSelect: (content: string) => void;
+  onSelect: (template: { id: string; content: string }) => void;
 };
 
 export const TemplatePickerDialog = ({ onSelect }: Props) => {
@@ -65,8 +65,8 @@ export const TemplatePickerDialog = ({ onSelect }: Props) => {
     fetchTemplates();
   }, [user]);
 
-  function handleClose(content: string) {
-    onSelect(content);
+  function handleClose(template: Template) {
+    onSelect({ id: template.id, content: template.body });
     setOpen(false);
   }
 
@@ -133,7 +133,7 @@ export const TemplatePickerDialog = ({ onSelect }: Props) => {
                 <div className="mt-4 text-right">
                   <Button
                     onClick={() => {
-                      handleClose(selectedTemplate.body);
+                      handleClose(selectedTemplate);
                     }}
                     className="bg-primary text-white"
                   >

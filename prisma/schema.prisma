@@ -24,6 +24,7 @@ model Sender {
   Tag       Tag[]
 
   @@map("sender")
+  Attachment Attachment[]
 }
 
 model Receiver {
@@ -38,10 +39,18 @@ model Receiver {
 
 model EmailSent {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type       String?
   sentAt     DateTime @default(now())
   isRead     Boolean @default(false)
   archived   Boolean @default(false)
+
+  categoryId  String?   @db.Uuid 
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  tagId       String?   @db.Uuid 
+  tag         Tag?      @relation(fields: [tagId], references: [id])
+
+  templateId String   @db.Uuid
+  template   Template @relation(fields: [templateId], references: [id])
 
   senderId   String @db.Uuid
   sender     Sender @relation(fields: [senderId], references: [id], onDelete: Cascade)
@@ -51,6 +60,19 @@ model EmailSent {
   
   @@map("email_sent")
 }
+
+model Attachment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fileUrl    String
+  fileName   String  
+  fileType   String   
+  size      Int     
+  createdAt DateTime @default(now())
+
+  userId    String?    @db.Uuid
+  sender    Sender?    @relation(fields: [userId], references: [id])
+}
+
 
 model Template {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -70,6 +92,7 @@ model Template {
 
   categoryId  String?    @db.Uuid
   category    Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  EmailSent EmailSent[]
 
   @@map("template")
 }
@@ -83,7 +106,8 @@ model Category {
   authorId    String     @db.Uuid
   author      Sender     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  templates   Template[] // reverse relation
+  templates   Template[] 
+  EmailSent   EmailSent[]
 
   @@map("category")
 }
@@ -97,7 +121,8 @@ model Tag {
   authorId    String     @db.Uuid
   author      Sender     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  templates   Template[] // reverse relation
+  templates   Template[]
+  EmailSent   EmailSent[]
 
   @@map("tag")
 }
