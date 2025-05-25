@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import {
   Trash2,
   MoreHorizontal,
   Eye,
+  Search,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -29,7 +30,17 @@ import { DuplicationDto, Template } from "@/types/template";
 import { useTemplateStore } from "@/zustand/template.store";
 import { CreateTemplateDialog } from "./create-template-dialog";
 
-export function TemplatesList() {
+interface TemplatesListProps {
+  searchQuery: string;
+  sortBy: string;
+  onFilteredCountChange: (count: number) => void;
+}
+
+export function TemplatesList({
+  searchQuery,
+  sortBy,
+  onFilteredCountChange,
+}: TemplatesListProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
   const [openPreview, setOpenPreview] = useState(false);
@@ -38,64 +49,180 @@ export function TemplatesList() {
   const { setSelectedTemplate } = useTemplateStore();
   const [open, setOpen] = useState(false);
 
-  const fetchTemplates = async () => {
-    const { data, error } = await supabase
-      .from("template")
-      .select(
-        `
-        id,
-        subject,
-        body,
-        description,
-        createdAt,
-        updatedAt,
-        tag ( id, name ),
-        category ( id, name )
-      `
-      )
-      .order("createdAt", { ascending: false });
+  // Helper function to extract plain text from HTML
+  const getPlainTextPreview = useCallback((html: string): string => {
+    if (!html) return "";
 
-    if (error) {
-      console.error("Error fetching templates:", error);
-      toast.error("Failed to load templates");
-      return;
-    }
-
-    setTemplates(data as unknown as Template[]);
-  };
-
-  const duplicateTemplate = async (template: DuplicationDto) => {
-    toast.loading("Duplicating template...", { id: "duplicate" });
     try {
-      if (!template.categoryId || !template.tagId) {
-        toast.error("Category and tag are required for duplication");
+      // Create a temporary div element to parse HTML
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = html;
+      const text = tempDiv.textContent || tempDiv.innerText || "";
+      return text.length > 150 ? text.slice(0, 150) + "..." : text;
+    } catch (error) {
+      // Fallback: Simple regex-based HTML tag removal
+      const cleaned = html
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned.length > 150 ? cleaned.slice(0, 150) + "..." : cleaned;
+    }
+  }, []);
+
+  // Helper function to highlight search terms
+  const highlightSearchTerm = useCallback(
+    (text: string, searchTerm: string): string => {
+      if (!searchTerm.trim()) return text;
+
+      try {
+        const regex = new RegExp(
+          `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+          "gi"
+        );
+        return text.replace(
+          regex,
+          '<mark class="bg-yellow-200 text-yellow-900 px-1 rounded">$1</mark>'
+        );
+      } catch (error) {
+        return text;
+      }
+    },
+    []
+  );
+
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("template")
+        .select(
+          `
+          id,
+          subject,
+          body,
+          description,
+          createdAt,
+          updatedAt,
+          tag ( id, name ),
+          category ( id, name )
+        `
+        )
+        .order("createdAt", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching templates:", error);
+        toast.error("Failed to load templates");
         return;
       }
 
-      const { error } = await supabase.from("template").insert({
-        subject: template.subject,
-        description: template.description,
-        body: template.body,
-        categoryId: template.categoryId,
-        tagId: template.tagId,
-        senderId: user?.id,
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      toast.success("Template duplicated successfully");
+      setTemplates(data as unknown as Template[]);
     } catch (error) {
-      console.error("Error duplicating template:", error);
-      toast.error("Failed to duplicate template");
-    } finally {
-      toast.dismiss("duplicate");
+      console.error("Error fetching templates:", error);
+      toast.error("Failed to load templates");
     }
-  };
+  }, []);
 
-  const handleTemplateDelete = async (id: string) => {
-    toast.loading("Deleting template...", { id: "delete" });
+  // Filter and sort templates
+  const filteredAndSortedTemplates = useMemo(() => {
+    let filtered = templates;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = templates.filter((template) => {
+        try {
+          const plainTextBody = getPlainTextPreview(template.body);
+          return (
+            template.subject.toLowerCase().includes(query) ||
+            template.description?.toLowerCase().includes(query) ||
+            plainTextBody.toLowerCase().includes(query) ||
+            template.category?.name.toLowerCase().includes(query) ||
+            template.tag?.name.toLowerCase().includes(query)
+          );
+        } catch (error) {
+          console.warn("Error filtering template:", error);
+          return false;
+        }
+      });
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      try {
+        switch (sortBy) {
+          case "recent":
+            return (
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+          case "updated":
+            return (
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+            );
+          case "name-asc":
+            return a.subject.localeCompare(b.subject);
+          case "name-desc":
+            return b.subject.localeCompare(a.subject);
+          case "oldest":
+            return (
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+          default:
+            return (
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+        }
+      } catch (error) {
+        console.warn("Error sorting templates:", error);
+        return 0;
+      }
+    });
+
+    return sorted;
+  }, [templates, searchQuery, sortBy, getPlainTextPreview]);
+
+  // Update filtered count when it changes
+  useEffect(() => {
+    onFilteredCountChange(filteredAndSortedTemplates.length);
+  }, [filteredAndSortedTemplates.length, onFilteredCountChange]);
+
+  const duplicateTemplate = useCallback(
+    async (template: DuplicationDto) => {
+      const toastId = "duplicate";
+      toast.loading("Duplicating template...", { id: toastId });
+
+      try {
+        if (!template.categoryId || !template.tagId) {
+          toast.error("Category and tag are required for duplication");
+          return;
+        }
+
+        const { error } = await supabase.from("template").insert({
+          subject: `${template.subject} (Copy)`,
+          description: template.description,
+          body: template.body,
+          categoryId: template.categoryId,
+          tagId: template.tagId,
+          senderId: user?.id,
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        toast.success("Template duplicated successfully");
+      } catch (error) {
+        console.error("Error duplicating template:", error);
+        toast.error("Failed to duplicate template");
+      } finally {
+        toast.dismiss(toastId);
+      }
+    },
+    [user?.id]
+  );
+
+  const handleTemplateDelete = useCallback(async (id: string) => {
+    const toastId = "delete";
+    toast.loading("Deleting template...", { id: toastId });
+
     try {
       if (!id) {
         toast.error("Template ID is missing");
@@ -113,14 +240,17 @@ export function TemplatesList() {
       console.error("Error deleting template:", error);
       toast.error("Failed to delete template");
     } finally {
-      toast.dismiss("delete");
+      toast.dismiss(toastId);
     }
-  };
+  }, []);
 
-  function handleEdit(template: Template) {
-    setSelectedTemplate(template);
-    setOpen(true);
-  }
+  const handleEdit = useCallback(
+    (template: Template) => {
+      setSelectedTemplate(template);
+      setOpen(true);
+    },
+    [setSelectedTemplate]
+  );
 
   useEffect(() => {
     fetchTemplates();
@@ -135,30 +265,34 @@ export function TemplatesList() {
           table: "template",
         },
         async (payload) => {
-          const { data, error } = await supabase
-            .from("template")
-            .select(
+          try {
+            const { data, error } = await supabase
+              .from("template")
+              .select(
+                `
+                id,
+                subject,
+                body,
+                description,
+                createdAt,
+                updatedAt,
+                tag ( id, name ),
+                category ( id, name )
               `
-              id,
-              subject,
-              body,
-              description,
-              createdAt,
-              updatedAt,
-              tag ( id, name ),
-              category ( id, name )
-            `
-            )
-            .eq("id", payload.new.id)
-            .single();
+              )
+              .eq("id", payload.new.id)
+              .single();
 
-          if (error) {
-            console.error("Error fetching new template:", error);
-            return;
+            if (error) {
+              console.error("Error fetching new template:", error);
+              return;
+            }
+
+            setTemplates((prev) => [data as unknown as Template, ...prev]);
+            toast.success("New template added");
+          } catch (error) {
+            console.error("Error handling template insert:", error);
           }
-
-          setTemplates((prev) => [data as unknown as Template, ...prev]);
-          toast.success("New template added");
         }
       )
       .on(
@@ -169,34 +303,38 @@ export function TemplatesList() {
           table: "template",
         },
         async (payload) => {
-          const { data, error } = await supabase
-            .from("template")
-            .select(
+          try {
+            const { data, error } = await supabase
+              .from("template")
+              .select(
+                `
+                id,
+                subject,
+                body,
+                description,
+                createdAt,
+                updatedAt,
+                tag ( id, name ),
+                category ( id, name )
               `
-              id,
-              subject,
-              body,
-              description,
-              createdAt,
-              updatedAt,
-              tag ( id, name ),
-              category ( id, name )
-            `
-            )
-            .eq("id", payload.new.id)
-            .single();
+              )
+              .eq("id", payload.new.id)
+              .single();
 
-          if (error) {
-            console.error("Error fetching updated template:", error);
-            return;
+            if (error) {
+              console.error("Error fetching updated template:", error);
+              return;
+            }
+
+            setTemplates((prev) =>
+              prev.map((t) =>
+                t.id === payload.new.id ? (data as unknown as Template) : t
+              )
+            );
+            toast.success("Template updated");
+          } catch (error) {
+            console.error("Error handling template update:", error);
           }
-
-          setTemplates((prev) =>
-            prev.map((t) =>
-              t.id === payload.new.id ? (data as unknown as Template) : t
-            )
-          );
-          toast.success("Template updated");
         }
       )
       .on(
@@ -207,8 +345,12 @@ export function TemplatesList() {
           table: "template",
         },
         (payload) => {
-          setTemplates((prev) => prev.filter((t) => t.id !== payload.old.id));
-          toast.success("Template deleted");
+          try {
+            setTemplates((prev) => prev.filter((t) => t.id !== payload.old.id));
+            toast.success("Template deleted");
+          } catch (error) {
+            console.error("Error handling template delete:", error);
+          }
         }
       )
       .subscribe();
@@ -216,17 +358,42 @@ export function TemplatesList() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchTemplates]);
 
-  const getPlainTextPreview = (html: string) => {
-    const doc = new DOMParser().parseFromString(html, "text/html");
+  // Show empty state when no templates match search
+  if (filteredAndSortedTemplates.length === 0 && searchQuery.trim()) {
     return (
-      doc.body.textContent?.slice(0, 100) +
-        (doc.body.textContent && doc.body.textContent.length > 100
-          ? "..."
-          : "") || ""
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <Search className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          No templates found
+        </h3>
+        <p className="text-gray-500 mb-4 max-w-md">
+          No templates match your search for "{searchQuery}". Try adjusting your
+          search terms or create a new template.
+        </p>
+      </div>
     );
-  };
+  }
+
+  // Show empty state when no templates exist
+  if (templates.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <FileText className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          No templates yet
+        </h3>
+        <p className="text-gray-500 mb-4">
+          Get started by creating your first email template.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -236,273 +403,194 @@ export function TemplatesList() {
           : "flex flex-col gap-4"
       }
     >
-      {templates.map((template) => (
+      {filteredAndSortedTemplates.map((template) => (
         <Card
           key={template.id}
           className={`group relative overflow-hidden border rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 ${
             viewMode === "list" ? "flex h-36" : "flex flex-col"
-          }`}
+          } ${searchQuery.trim() ? "ring-1 ring-green-200" : ""}`}
           onMouseEnter={() => setHoveredTemplate(template.id)}
           onMouseLeave={() => setHoveredTemplate(null)}
         >
-          {/* {viewMode === "list" ? (
-            <Card
-              key={template.id}
-              className={`group relative overflow-hidden border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex h-40 bg-white hover:bg-gray-50`}
-              onMouseEnter={() => setHoveredTemplate(template.id)}
-              onMouseLeave={() => setHoveredTemplate(null)}
-            >
-              <div className="w-1/3 border-r bg-gray-100 p-4 flex items-center justify-center">
-                <p className="text-sm text-gray-700 line-clamp-4 font-light italic">
-                  {getPlainTextPreview(template.body) || "No preview available"}
-                </p>
-              </div>
-              <div className="flex-1 flex flex-col">
-                <CardContent className="p-4 flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 pr-4">
-                      <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                        {template.subject}
-                      </h3>
-                      {template.description && (
-                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                          {template.description}
-                        </p>
-                      )}
-                    </div>
-                    <div
-                      className={`flex items-center gap-2 transition-opacity duration-200 ${
-                        hoveredTemplate === template.id
-                          ? "opacity-100"
-                          : "opacity-0"
-                      }`}
+          <CardContent className="p-0">
+            <div className="relative h-48 bg-gray-50 p-6 flex items-center justify-center border-b">
+              {hoveredTemplate === template.id && (
+                <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-200">
+                  <div className="flex gap-2">
+                    <PreviewDialog
+                      openPreview={openPreview}
+                      setOpenPreview={setOpenPreview}
+                      children={
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="bg-white hover:bg-gray-100"
+                          onClick={() => setOpenPreview(true)}
+                        >
+                          <Eye className="mr-1 h-4 w-4" />
+                          Preview
+                        </Button>
+                      }
+                      content={template.body}
+                    />
+                    <CreateTemplateDialog
+                      open={open}
+                      setOpen={setOpen}
+                      trigger={
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => handleEdit(template)}
+                        >
+                          <Edit className="mr-1 h-4 w-4" />
+                          Edit
+                        </Button>
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+              <p
+                className="text-sm text-gray-600 line-clamp-4 text-center"
+                dangerouslySetInnerHTML={{
+                  __html: highlightSearchTerm(
+                    getPlainTextPreview(template.body),
+                    searchQuery
+                  ),
+                }}
+              />
+            </div>
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3
+                  className="text-lg font-medium text-gray-900 line-clamp-1"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightSearchTerm(template.subject, searchQuery),
+                  }}
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <PreviewDialog
+                      openPreview={openPreview}
+                      setOpenPreview={setOpenPreview}
+                      children={
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => setOpenPreview(true)}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          Preview
+                        </DropdownMenuItem>
+                      }
+                      content={template.body}
+                    />
+                    <CreateTemplateDialog
+                      open={open}
+                      setOpen={setOpen}
+                      trigger={
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => handleEdit(template)}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                      }
+                    />
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() =>
+                        duplicateTemplate({
+                          subject: template.subject,
+                          body: template.body,
+                          categoryId: template.category?.id || "",
+                          tagId: template.tag?.id || "",
+                          description: template.description || "",
+                        })
+                      }
                     >
-                      <PreviewDialog
-                        openPreview={openPreview}
-                        setOpenPreview={setOpenPreview}
-                        children={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Preview"
-                            onClick={() => setOpenPreview(true)}
-                          >
-                            <Eye className="h-4 w-4 text-gray-500" />
-                          </Button>
-                        }
-                        content={template.body}
-                      />
-                      <CreateTemplateDialog
-                        open={open}
-                        setOpen={setOpen}
-                        trigger={
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Edit"
-                            onClick={() => handleEdit(template)}
-                          >
-                            <Edit className="h-4 w-4 text-gray-500" />
-                          </Button>
-                        }
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Duplicate"
-                        onClick={() =>
-                          duplicateTemplate({
-                            subject: template.subject,
-                            body: template.body,
-                            categoryId: template.category?.id || "",
-                            tagId: template.tag?.id || "",
-                            description: template.description || "",
-                          })
-                        }
-                      >
-                        <Copy className="h-4 w-4 text-gray-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Delete"
-                        onClick={() => handleTemplateDelete(template.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t bg-gray-50 px-4 py-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {template.category && (
-                      <Badge
-                        variant="secondary"
-                        className="text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        {template.category.name}
-                      </Badge>
-                    )}
-                    {template.tag && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs font-medium border-green-200 text-green-800"
-                      >
-                        {template.tag.name}
-                      </Badge>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {new Date(template.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </span>
-                </CardFooter>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 cursor-pointer"
+                      onClick={() => handleTemplateDelete(template.id)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            </Card>
-          ) : ( */}
-          <>
-            <CardContent className="p-0">
-              <div className="relative h-48 bg-gray-50 p-6 flex items-center justify-center border-b">
-                {hoveredTemplate === template.id && (
-                  <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-200">
-                    <div className="flex gap-2">
-                      <PreviewDialog
-                        openPreview={openPreview}
-                        setOpenPreview={setOpenPreview}
-                        children={
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="bg-white hover:bg-gray-100"
-                            onClick={() => setOpenPreview(true)}
-                          >
-                            <Eye className="mr-1 h-4 w-4" />
-                            Preview
-                          </Button>
-                        }
-                        content={template.body}
-                      />
-                      <CreateTemplateDialog
-                        open={open}
-                        setOpen={setOpen}
-                        trigger={
-                          <Button
-                            size="sm"
-                            className="bg-primary hover:bg-primary-dark"
-                            onClick={() => handleEdit(template)}
-                          >
-                            <Edit className="mr-1 h-4 w-4" />
-                            Edit
-                          </Button>
-                        }
-                      />
-                    </div>
-                  </div>
+              {template.description && (
+                <p
+                  className="text-sm text-gray-500 line-clamp-2 mb-3"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightSearchTerm(
+                      template.description,
+                      searchQuery
+                    ),
+                  }}
+                />
+              )}
+              <div className="flex flex-wrap gap-2">
+                {template.tag && (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-medium ${
+                      template.tag.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
+                        ? "border-green-300 bg-green-50 text-green-700"
+                        : ""
+                    }`}
+                  >
+                    <span
+                      dangerouslySetInnerHTML={{
+                        __html: highlightSearchTerm(
+                          template.tag.name,
+                          searchQuery
+                        ),
+                      }}
+                    />
+                  </Badge>
                 )}
-                <p className="text-sm text-gray-600 line-clamp-4 text-center">
-                  {getPlainTextPreview(template.body)}
-                </p>
               </div>
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-medium text-gray-900 line-clamp-1">
-                    {template.subject}
-                  </h3>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4 text-gray-500" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <PreviewDialog
-                        openPreview={openPreview}
-                        setOpenPreview={setOpenPreview}
-                        children={
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => setOpenPreview(true)}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Preview
-                          </DropdownMenuItem>
-                        }
-                        content={template.body}
-                      />
-                      <CreateTemplateDialog
-                        open={open}
-                        setOpen={setOpen}
-                        trigger={
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => handleEdit(template)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                        }
-                      />
-
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() =>
-                          duplicateTemplate({
-                            subject: template.subject,
-                            body: template.body,
-                            categoryId: template.category?.id || "",
-                            tagId: template.tag?.id || "",
-                            description: template.description || "",
-                          })
-                        }
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        Duplicate
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-600 cursor-pointer"
-                        onClick={() => handleTemplateDelete(template.id)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            </div>
+          </CardContent>
+          <CardFooter className="border-t bg-gray-50 px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {template.category && (
+                <div className="flex items-center gap-1">
+                  <FileText className="h-4 w-4 text-gray-400" />
+                  <span
+                    className={`text-xs font-medium ${
+                      template.category.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                    dangerouslySetInnerHTML={{
+                      __html: highlightSearchTerm(
+                        template.category.name,
+                        searchQuery
+                      ),
+                    }}
+                  />
                 </div>
-                {template.description && (
-                  <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-                    {template.description}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  {template.tag && (
-                    <Badge variant="outline" className="text-xs font-medium">
-                      {template.tag.name}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t bg-gray-50 px-4 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {template.category && (
-                  <div className="flex items-center gap-1">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span className="text-xs text-gray-500 font-medium">
-                      {template.category.name}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <span className="text-xs text-gray-500">
-                {new Date(template.createdAt).toLocaleDateString()}
-              </span>
-            </CardFooter>
-          </>
-          {/* )} */}
+              )}
+            </div>
+            <span className="text-xs text-gray-500">
+              {new Date(template.createdAt).toLocaleDateString()}
+            </span>
+          </CardFooter>
         </Card>
       ))}
     </div>

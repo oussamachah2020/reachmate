@@ -15,6 +15,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Mail,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,67 +24,159 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Email } from "@/types/inbox";
+import { cn } from "@/lib/utils";
 
-// Sample email data for the preview
-const email = {
-  id: 1,
-  sender: {
-    name: "Alex Johnson",
-    email: "alex@company.com",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  recipients: [
-    { name: "Me", email: "me@company.com" },
-    { name: "Marketing Team", email: "marketing@company.com" },
-  ],
-  subject: "Project Proposal: Q3 Marketing Campaign",
-  date: "Today at 10:32 AM",
-  content: `
-    <p>Hi Team,</p>
-    <p>I've attached the proposal for the upcoming marketing campaign that we discussed in our meeting last week.</p>
-    <p>The proposal includes:</p>
-    <ul>
-      <li>Campaign objectives and KPIs</li>
-      <li>Target audience analysis</li>
-      <li>Content strategy and messaging</li>
-      <li>Channel distribution plan</li>
-      <li>Budget allocation</li>
-      <li>Timeline and milestones</li>
-    </ul>
-    <p>Please review and provide your feedback by Friday. I'd like to finalize this by early next week so we can begin implementation.</p>
-    <p>Let me know if you have any questions or need clarification on any points.</p>
-    <p>Best regards,<br>Alex</p>
-  `,
-  attachments: [
-    { name: "Q3_Marketing_Proposal.pdf", size: "2.4 MB", type: "pdf" },
-    { name: "Campaign_Budget.xlsx", size: "1.2 MB", type: "excel" },
-    { name: "Creative_Assets.zip", size: "8.7 MB", type: "zip" },
-  ],
-  flagged: true,
-  labels: ["Work", "Important", "Marketing", "Q3 Projects"],
-};
+interface EmailPreviewProps {
+  activeEmail: string | null;
+  emailList: Email[];
+}
 
-export function EmailPreview() {
+export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
+  // Find the current email from the list
+  const currentEmail = emailList.find((email) => email.id === activeEmail);
+
+  // Find current email index for navigation
+  const currentIndex = emailList.findIndex((email) => email.id === activeEmail);
+  const canGoPrevious = currentIndex > 0;
+  const canGoNext = currentIndex < emailList.length - 1;
+
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.download = fileName;
+      link.target = "_blank";
+
+      // For external URLs or if CORS is an issue, we might need to fetch first
+      try {
+        const response = await fetch(fileUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          link.href = objectUrl;
+
+          // Trigger download
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          // Clean up object URL
+          URL.revokeObjectURL(objectUrl);
+        } else {
+          // Fallback: open in new tab if fetch fails
+          window.open(fileUrl, "_blank");
+        }
+      } catch (fetchError) {
+        // Fallback: open in new tab if fetch fails
+        window.open(fileUrl, "_blank");
+      }
+    } catch (error) {
+      console.error("Download failed:", error);
+      // Last resort: try to open the URL directly
+      window.open(fileUrl, "_blank");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      return `Today at ${date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })}`;
+    }
+    if (diffDays === 2) {
+      return `Yesterday at ${date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })}`;
+    }
+    return date.toLocaleString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  // If no email is selected, show empty state
+  if (!currentEmail) {
+    return (
+      <div className="flex w-full h-full flex-col items-center justify-center bg-gray-50/30">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+            <Mail className="w-8 h-8 text-gray-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">
+              No email selected
+            </h3>
+            <p className="text-sm text-gray-500">
+              Choose an email from the list to view its contents
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex w-full h-full flex-col">
+    <div className="flex w-full h-full flex-col bg-white">
       {/* Email preview header */}
       <div className="flex items-center justify-between border-b bg-white p-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-lg font-semibold">{email.subject}</h2>
-          {email.labels.map((label) => (
-            <Badge key={label} variant="outline" className="text-xs">
-              {label}
-            </Badge>
-          ))}
+          <h2 className="text-lg font-semibold truncate">
+            {currentEmail.template?.subject || "No Subject"}
+          </h2>
+          <div className="flex items-center space-x-2">
+            {currentEmail.category && (
+              <Badge
+                variant="secondary"
+                className="text-xs bg-gray-100 text-gray-600"
+              >
+                {currentEmail.category.name}
+              </Badge>
+            )}
+            {currentEmail.tag && (
+              <Badge
+                variant="outline"
+                className="text-xs border-green-200 text-green-600 bg-green-50"
+              >
+                {currentEmail.tag.name}
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="icon" title="Previous email">
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Previous email"
+            disabled={!canGoPrevious}
+            className="disabled:opacity-50"
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" title="Next email">
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Next email"
+            disabled={!canGoNext}
+            className="disabled:opacity-50"
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -92,36 +185,52 @@ export function EmailPreview() {
       {/* Email actions */}
       <div className="flex items-center justify-between border-b bg-white p-2">
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="sm" className="h-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+          >
             <Reply className="mr-2 h-4 w-4" />
             Reply
           </Button>
-          <Button variant="ghost" size="sm" className="h-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+          >
             <ReplyAll className="mr-2 h-4 w-4" />
             Reply All
           </Button>
-          <Button variant="ghost" size="sm" className="h-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+          >
             <Forward className="mr-2 h-4 w-4" />
             Forward
           </Button>
         </div>
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-gray-100"
+          >
             <Archive className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
-            data-starred={email.flagged}
+            className="h-8 w-8 hover:bg-amber-50"
           >
-            <Star
-              className="h-4 w-4"
-              fill={email.flagged ? "currentColor" : "none"}
-            />
+            <Star className="h-4 w-4 hover:text-amber-500" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -141,69 +250,93 @@ export function EmailPreview() {
       </div>
 
       {/* Email content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-6">
         <div className="mb-6 flex items-start justify-between">
-          <div className="flex items-start space-x-3">
-            <Avatar className="h-10 w-10">
+          <div className="flex items-start space-x-4">
+            <Avatar className="h-12 w-12 ring-2 ring-white shadow-sm">
               <AvatarImage
-                src={email.sender.avatar || "/placeholder.svg"}
-                alt={email.sender.name}
+                src="/placeholder.svg"
+                alt={`${currentEmail.sender.firstName} ${currentEmail.sender.lastName}`}
               />
-              <AvatarFallback>{email.sender.name.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-semibold">
+                {currentEmail.sender.firstName.charAt(0)}
+                {currentEmail.sender.lastName.charAt(0)}
+              </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="space-y-1">
               <div className="flex items-center space-x-2">
-                <h3 className="font-semibold">{email.sender.name}</h3>
-                <span className="text-xs text-gray-500">
-                  &lt;{email.sender.email}&gt;
+                <h3 className="font-semibold text-gray-900">
+                  {currentEmail.sender.firstName} {currentEmail.sender.lastName}
+                </h3>
+                <span className="text-sm text-gray-500">
+                  &lt;{currentEmail.sender.email}&gt;
                 </span>
               </div>
-              <div className="text-xs text-gray-500">
-                <span>To: </span>
-                {email.recipients.map((recipient, index) => (
-                  <span key={recipient.email}>
-                    {recipient.name}{" "}
-                    {index < email.recipients.length - 1 ? ", " : ""}
-                  </span>
-                ))}
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">To: </span>
+                <span>{currentEmail.receiver.email}</span>
               </div>
-              <div className="text-xs text-gray-500">{email.date}</div>
+              <div className="text-sm text-gray-500">
+                {formatDate(currentEmail.sentAt)}
+              </div>
             </div>
           </div>
+          {!currentEmail.isRead && (
+            <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+          )}
         </div>
 
-        <div
-          className="prose prose-sm max-w-none"
-          dangerouslySetInnerHTML={{ __html: email.content }}
-        />
+        {/* Email body */}
+        <div className="prose prose-sm max-w-none">
+          {currentEmail.template?.body ? (
+            <div
+              className="text-gray-800 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: currentEmail.template.body }}
+            />
+          ) : (
+            <div className="text-gray-500 italic">
+              No content available for this email.
+            </div>
+          )}
+        </div>
 
         {/* Attachments */}
-        {email.attachments && email.attachments.length > 0 && (
-          <div className="mt-6 rounded-md border bg-gray-50 p-4">
-            <h4 className="mb-2 flex items-center text-sm font-medium text-gray-700">
+        {currentEmail.attachment && currentEmail.attachment.length > 0 && (
+          <div className="mt-8 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+            <h4 className="mb-3 flex items-center text-sm font-semibold text-gray-700">
               <Paperclip className="mr-2 h-4 w-4" />
-              Attachments ({email.attachments.length})
+              Attachments ({currentEmail.attachment.length})
             </h4>
-            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-              {email.attachments.map((attachment) => (
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {currentEmail.attachment.map((attachment, index) => (
                 <div
-                  key={attachment.name}
-                  className="flex items-center justify-between rounded-md border bg-white p-2 text-sm"
+                  key={index}
+                  className="flex items-center justify-between rounded-md border border-gray-200 bg-white p-3 text-sm shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-center space-x-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded bg-gray-100">
-                      <span className="text-xs font-medium uppercase text-gray-500">
-                        {attachment.type.slice(0, 3)}
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                      <span className="text-xs font-bold uppercase">
+                        {attachment.fileType?.slice(0, 3) || "DOC"}
                       </span>
                     </div>
-                    <div>
-                      <div className="font-medium">{attachment.name}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-gray-900 truncate">
+                        {attachment.fileName}
+                      </div>
                       <div className="text-xs text-gray-500">
-                        {attachment.size}
+                        {attachment.fileType}
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-500 hover:text-green-600 hover:bg-green-50"
+                    onClick={() =>
+                      handleDownload(attachment.fileUrl, attachment.fileName)
+                    }
+                    title={`Download ${attachment.fileName}`}
+                  >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>

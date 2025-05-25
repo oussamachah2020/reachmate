@@ -24,13 +24,20 @@ import {
   SelectValue,
 } from "../ui/select";
 import { toast } from "sonner";
+import { ReceiverEmailSelect } from "./receiver-email-creatble-select";
+import AttachmentsDialog from "./attachments-dialog";
+import { Separator } from "../ui/separator";
 
 type Attachment = {
+  id: string;
   name: string;
+  fileName: string;
   url: string;
+  fileUrl: string;
   path: string;
   mimeType: string;
-  content: string; // base64 encoded
+  fileType: string;
+  content: string;
 };
 
 type FormValues = {
@@ -39,6 +46,11 @@ type FormValues = {
   cc?: string;
   categoryId: string;
   tagId: string;
+};
+
+type EmailOption = {
+  value: string;
+  label: string;
 };
 
 const EmailSendingDialog = () => {
@@ -55,14 +67,39 @@ const EmailSendingDialog = () => {
   const [tags, setTags] = useState<
     { id: string; name: string; count: number }[]
   >([]);
+
+  const [toEmail, setToEmail] = useState<EmailOption | null>(null);
+  const [ccEmail, setCcEmail] = useState<EmailOption | null>(null);
+
   const { user } = useAuthStore();
 
   const {
     register,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
+    watch,
   } = useForm<FormValues>();
+
+  const watchedTo = watch("to");
+  const watchedCc = watch("cc");
+
+  useEffect(() => {
+    if (toEmail) {
+      setValue("to", toEmail.value);
+    } else {
+      setValue("to", "");
+    }
+  }, [toEmail, setValue]);
+
+  useEffect(() => {
+    if (ccEmail) {
+      setValue("cc", ccEmail.value);
+    } else {
+      setValue("cc", "");
+    }
+  }, [ccEmail, setValue]);
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -72,7 +109,11 @@ const EmailSendingDialog = () => {
         return;
       }
 
-      // Step 1: Send the email via your backend (optional)
+      if (!data.to) {
+        toast.error("Please select a recipient.");
+        return;
+      }
+
       const res = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,6 +121,7 @@ const EmailSendingDialog = () => {
           to: data.to,
           subject: data.subject,
           html: content,
+          cc: data.cc,
           attachments,
         }),
       });
@@ -90,52 +132,90 @@ const EmailSendingDialog = () => {
         return;
       }
 
-      // Step 2: Insert email metadata in `email_sent`
+      let receiverData;
+
+      const { data: existingReceiver, error: findError } = await supabase
+        .from("receiver")
+        .select("*")
+        .eq("email", data.to)
+        .single();
+
+      if (existingReceiver) {
+        receiverData = existingReceiver;
+        console.log("Using existing receiver:", existingReceiver.email);
+      } else {
+        const { data: newReceiver, error: createError } = await supabase
+          .from("receiver")
+          .insert({
+            firstName: "",
+            lastName: "",
+            email: data.to,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating receiver:", createError);
+          toast.error("Failed to save receiver data.");
+          return;
+        }
+
+        receiverData = newReceiver;
+      }
+
       const { data: emailSentData, error: emailError } = await supabase
         .from("email_sent")
         .insert([
           {
             categoryId: data.categoryId || null,
             tagId: data.tagId || null,
-            templateId: selectedTemplate.id, // ensure you pass templateId somehow
+            templateId: selectedTemplate.id,
             senderId: user?.id,
-            receiverId: result.receiverId, // You must either derive or get this from the result
+            receiverId: receiverData?.id,
           },
         ])
         .select()
         .single();
 
-      if (emailError || !emailSentData) {
+      if (emailError) {
         console.error(emailError);
         toast.error("Failed to save email metadata.");
         return;
       }
 
-      const emailSentId = emailSentData.id;
+      // Only insert new attachments, not existing ones
+      const newAttachmentInserts = attachments
+        .filter((file) => !file.id) // New uploads don't have an id initially
+        .map((file) => ({
+          fileUrl: file.url,
+          fileName: file.name,
+          fileType: file.mimeType,
+          size: atob(file.content).length,
+          emailSendId: emailSentData.id,
+          userId: user?.id,
+        }));
 
-      // Step 3: Save attachments to `attachment` table
-      const attachmentInserts = attachments.map((file) => ({
-        fileUrl: file.url,
-        fileName: file.name,
-        fileType: file.mimeType,
-        size: atob(file.content).length, // rough estimation
-        userId: user?.id,
-      }));
-
-      if (attachmentInserts.length > 0) {
+      if (newAttachmentInserts.length > 0) {
         const { error: attachError } = await supabase
           .from("attachment")
-          .insert(attachmentInserts);
+          .insert(newAttachmentInserts);
 
         if (attachError) {
           console.error(attachError);
-          toast.error("Failed to save attachments.");
+          toast.error("Failed to save new attachments.");
           return;
         }
       }
 
       toast.success("Email sent and saved successfully!");
-      // Optionally: reset form here
+
+      // Reset form
+      reset();
+      setToEmail(null);
+      setCcEmail(null);
+      setContent("");
+      setSelectedTemplate({ id: "", content: "" });
+      setAttachments([]);
     } catch (err) {
       console.error("Error sending/saving email:", err);
       toast.error("Something went wrong.");
@@ -163,22 +243,25 @@ const EmailSendingDialog = () => {
         data: { publicUrl },
       } = supabase.storage.from("attachments").getPublicUrl(path);
 
-      // Read and encode the file content
       const base64Content = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
           const result = reader.result as string;
-          resolve(result.split(",")[1]); // remove data:...base64,
+          resolve(result.split(",")[1]);
         };
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
 
       uploaded.push({
+        id: "", // New uploads start without ID
         name: file.name,
+        fileName: file.name,
         url: publicUrl,
+        fileUrl: publicUrl,
         path,
         mimeType: file.type,
+        fileType: file.type,
         content: base64Content,
       });
     }
@@ -188,15 +271,19 @@ const EmailSendingDialog = () => {
   };
 
   const handleDelete = async (filePath: string) => {
-    const { error } = await supabase.storage
-      .from("attachments")
-      .remove([filePath]);
+    // For new uploads, delete from storage
+    if (!filePath.startsWith('http')) {
+      const { error } = await supabase.storage
+        .from("attachments")
+        .remove([filePath]);
 
-    if (error) {
-      console.error("Delete error:", error);
-      return;
+      if (error) {
+        console.error("Delete error:", error);
+        return;
+      }
     }
 
+    // Remove from state (works for both new uploads and existing files)
     setAttachments((prev) => prev.filter((file) => file.path !== filePath));
   };
 
@@ -241,44 +328,41 @@ const EmailSendingDialog = () => {
 
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className="flex flex-col space-y-2 px-4 py-3"
+              className="flex flex-col space-y-3 px-4 py-3"
             >
-              <Input
-                placeholder="To"
-                className="text-sm border-gray-200"
-                {...register("to", {
-                  required: "Recipient email is required",
-                  pattern: {
-                    value: /^\S+@\S+\.\S+$/,
-                    message: "Invalid email format",
-                  },
-                })}
-              />
-              {errors.to && (
-                <span className="text-red-500 text-xs">
-                  {errors.to.message}
-                </span>
-              )}
+              <div>
+                <ReceiverEmailSelect value={toEmail} onChange={setToEmail} />
+                {errors.to && (
+                  <span className="text-red-500 text-xs">
+                    Recipient is required
+                  </span>
+                )}
+              </div>
 
-              <Input
-                placeholder="Subject"
-                className="text-sm border-gray-200"
-                {...register("subject", { required: "Subject is required" })}
-              />
-              {errors.subject && (
-                <span className="text-red-500 text-xs">
-                  {errors.subject.message}
-                </span>
-              )}
+              <div>
+                <Input
+                  id="subject"
+                  placeholder="Subject"
+                  className="text-sm border-gray-200"
+                  {...register("subject", { required: "Subject is required" })}
+                />
+                {errors.subject && (
+                  <span className="text-red-500 text-xs">
+                    {errors.subject.message}
+                  </span>
+                )}
+              </div>
 
-              <Input
-                placeholder="cc"
-                className="text-sm border-gray-200"
-                {...register("cc")}
-              />
+              <div>
+                <ReceiverEmailSelect
+                  placeholder="cc"
+                  value={ccEmail}
+                  onChange={setCcEmail}
+                />
+              </div>
 
-              <div className="flex gap-3 w-full my-1">
-                <div className="w-full space-y-3">
+              <div className="flex gap-3 w-full">
+                <div className="w-full space-y-2">
                   <Label htmlFor="categoryId">Category</Label>
                   <Select onValueChange={(val) => setValue("categoryId", val)}>
                     <SelectTrigger id="categoryId" className="w-full">
@@ -299,7 +383,7 @@ const EmailSendingDialog = () => {
                   )}
                 </div>
 
-                <div className="w-full space-y-3">
+                <div className="w-full space-y-2">
                   <Label htmlFor="tagId">Tag</Label>
                   <Select onValueChange={(val) => setValue("tagId", val)}>
                     <SelectTrigger id="tagId" className="w-full">
@@ -321,27 +405,31 @@ const EmailSendingDialog = () => {
                 </div>
               </div>
 
-              <RichTextEditor
-                value={content}
-                htmlContent={selectedTemplate.content}
-                onChange={setContent}
-              />
+              <div className="space-y-3">
+                <Label>Message</Label>
+                <RichTextEditor
+                  value={content}
+                  htmlContent={selectedTemplate.content}
+                  onChange={setContent}
+                />
+              </div>
 
+              {/* Attachments Display */}
               {attachments.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {attachments.map((file) => (
+                  {attachments.map((file, index) => (
                     <div
-                      key={file.path}
+                      key={file.path || index}
                       className="group relative flex items-center px-3 py-2 bg-gray-100 rounded-md text-sm text-gray-800 border"
                     >
                       <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
                       <a
-                        href={file.url}
+                        href={file.url || file.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:underline max-w-[180px] truncate"
                       >
-                        {file.name}
+                        {file.name || file.fileName}
                       </a>
                       <button
                         type="button"
@@ -355,7 +443,8 @@ const EmailSendingDialog = () => {
                 </div>
               )}
 
-              <div className="flex justify-between items-center pt-2 border-t mt-2">
+              {/* Footer Actions */}
+              <div className="flex justify-between items-center pt-2 border-t mt-4">
                 <div className="flex items-center space-x-2">
                   <TemplatePickerDialog
                     onSelect={(template) => {
@@ -371,7 +460,7 @@ const EmailSendingDialog = () => {
                     className="cursor-pointer flex items-center text-muted-foreground hover:text-primary text-sm"
                   >
                     <Paperclip className="h-4 w-4 mr-1" />
-                    {uploading ? "Uploading..." : "Attach"}
+                    {uploading ? "Uploading..." : "Quick Upload"}
                   </label>
                   <input
                     id="file-upload"
@@ -380,10 +469,15 @@ const EmailSendingDialog = () => {
                     multiple
                     onChange={(e) => handleFileUpload(e.target.files)}
                   />
+                  <div className="h-5 bg-gray-400 w-[1px]" />
+                  <AttachmentsDialog 
+                    selectedAttachments={attachments}
+                    onAttachmentsChange={setAttachments}
+                  />
                 </div>
 
                 <Button type="submit" className="bg-primary text-white">
-                  <Send className="h-4 w-4" />
+                  <Send className="h-4 w-4 mr-1" />
                   Send
                 </Button>
               </div>

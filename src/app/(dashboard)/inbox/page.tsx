@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Metadata } from "next";
 import { InboxHeader } from "@/components/inbox/inbox-header";
 import { EmailList } from "@/components/inbox/email-list";
@@ -7,25 +10,28 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import EmailSendingDialog from "@/components/inbox/email-sending-dialog";
-
-export const metadata: Metadata = {
-  title: "Inbox | ReachMate",
-  description: "Manage your incoming emails",
-};
+import { Email } from "@/types/inbox";
 
 export default function InboxPage() {
+  const [activeEmail, setActiveEmail] = useState<string | null>(null);
+  const [emailList, setEmailList] = useState<Email[]>([]);
+
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col relative">
       <InboxHeader />
       {/* Inbox layout */}
       <ResizablePanelGroup direction="horizontal" className="overflow-hidden">
         <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
-          <EmailList />
+          <EmailList
+            activeEmail={activeEmail}
+            setActiveEmail={setActiveEmail}
+            emailList={emailList}
+            setEmailList={setEmailList}
+          />
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel defaultSize={50}>
-          <EmailPreview />
+          <EmailPreview activeEmail={activeEmail} emailList={emailList} />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

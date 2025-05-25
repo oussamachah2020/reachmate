@@ -5,13 +5,14 @@ const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KET!);
 
 export async function POST(req: Request) {
   try {
-    const { to, subject, html, attachments } = await req.json();
+    const { to, subject, html, cc, attachments } = await req.json();
 
     const result = await resend.emails.send({
       from: "delivered@resend.dev",
       to,
       subject,
       html,
+      cc,
       attachments: attachments?.map((file: any) => ({
         filename: file.name,
         content: file.content,
