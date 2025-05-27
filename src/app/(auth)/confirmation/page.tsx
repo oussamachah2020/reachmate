@@ -10,22 +10,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { verifyEmail } from "@/loaders/auth";
 
 export default function ConfirmPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "success">("loading");
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+
+  const token = params.get("access_token");
+  const type = params.get("type");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setStatus("success");
+    async function confirmEmail() {
+      if (token && type) {
+        await verifyEmail(token, type);
 
-      setTimeout(() => {
-        router.push("/sign-in");
-      }, 1000);
-    }, 1500);
+        setStatus("success");
+        router.replace("/sign-in");
+      }
+    }
 
-    return () => clearTimeout(timer);
-  }, [router]);
+    confirmEmail();
+  }, [router, token, type]);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">

@@ -33,11 +33,11 @@ async function signUpUser(data: RegisterDto) {
   }
 }
 
-async function verifyEmail(token: string) {
+async function verifyEmail(token: string, type: any) {
   try {
     const { data, error } = await supabase.auth.verifyOtp({
       token_hash: token,
-      type: "email", // Type can be 'signup', 'recovery', etc.
+      type: type as any,
     });
 
     if (error) {

@@ -108,6 +108,8 @@ export function CreateTemplateDialog({ open, setOpen, trigger }: Props) {
         }
 
         toast.success("Template created successfully");
+        setOpen(false);
+
       } else {
         const { error } = await supabase
           .from("template")
@@ -128,6 +130,7 @@ export function CreateTemplateDialog({ open, setOpen, trigger }: Props) {
         }
 
         toast.success("Template updated successfully");
+        setOpen(false);
       }
     } catch (error) {
       toast.error("Error creating template, try again later");

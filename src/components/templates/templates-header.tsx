@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Grid3X3, List } from "lucide-react";
+import { Search, Plus, Grid3X3, List, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,25 +11,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { CreateTemplateDialog } from "./create-template-dialog";
 import { useViewModeStore } from "@/zustand/global.store";
 
-export function TemplatesHeader() {
-  const [searchQuery, setSearchQuery] = useState("");
+interface TemplatesHeaderProps {
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  sortBy: string;
+  setSortBy: (sort: string) => void;
+  totalTemplates: number;
+  filteredCount: number;
+}
+
+export function TemplatesHeader({
+  searchQuery,
+  setSearchQuery,
+  sortBy,
+  setSortBy,
+  totalTemplates,
+  filteredCount,
+}: TemplatesHeaderProps) {
   const { viewMode, setViewMode } = useViewModeStore();
   const [open, setOpen] = useState(false);
+
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
+
+  const hasActiveFilters = searchQuery.length > 0;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col justify-between space-y-2 md:flex-row md:items-center md:space-y-0">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-          Email Templates
-        </h1>
+        <div className="flex items-center space-x-3">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+            Email Templates
+          </h1>
+          {hasActiveFilters && (
+            <Badge variant="secondary" className="bg-green-100 text-green-800">
+              {filteredCount} of {totalTemplates}
+            </Badge>
+          )}
+        </div>
         <CreateTemplateDialog
           open={open}
           setOpen={setOpen}
           trigger={
-            <Button onClick={() => setOpen(true)}>
+            <Button
+              onClick={() => setOpen(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Template
             </Button>
@@ -42,46 +74,88 @@ export function TemplatesHeader() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             type="search"
-            placeholder="Search templates..."
-            className="w-full pl-8"
+            placeholder="Search templates by name, description, or content..."
+            className="w-full pl-8 pr-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1 h-7 w-7 p-0 hover:bg-gray-100"
+              onClick={clearSearch}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center space-x-2">
-          <Select defaultValue="recent">
+          <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="recent">Recently Used</SelectItem>
-              <SelectItem value="name">Name (A-Z)</SelectItem>
-              <SelectItem value="created">Date Created</SelectItem>
-              <SelectItem value="usage">Most Used</SelectItem>
+              <SelectItem value="recent">Recently Created</SelectItem>
+              <SelectItem value="updated">Recently Updated</SelectItem>
+              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+              <SelectItem value="oldest">Oldest First</SelectItem>
             </SelectContent>
           </Select>
 
-          {/* <div className="flex items-center rounded-md border bg-white p-1">
+          <div className="flex items-center rounded-md border bg-white p-1">
             <Button
               variant={viewMode === "grid" ? "default" : "ghost"}
               size="icon"
-              className="h-8 w-8"
+              className={`h-8 w-8 ${
+                viewMode === "grid"
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : "hover:bg-gray-100"
+              }`}
               onClick={() => setViewMode("grid")}
+              title="Grid view"
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="icon"
-              className="h-8 w-8"
+              className={`h-8 w-8 ${
+                viewMode === "list"
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : "hover:bg-gray-100"
+              }`}
               onClick={() => setViewMode("list")}
+              title="List view"
             >
               <List className="h-4 w-4" />
             </Button>
-          </div> */}
+          </div>
         </div>
       </div>
+
+      {/* Active Filters Display */}
+      {hasActiveFilters && (
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-600">Active filters:</span>
+          <Badge
+            variant="secondary"
+            className="bg-green-50 text-green-700 border-green-200"
+          >
+            Search: "{searchQuery}"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-1 h-4 w-4 p-0 hover:bg-green-100"
+              onClick={clearSearch}
+            >
+              <X className="h-2 w-2" />
+            </Button>
+          </Badge>
+        </div>
+      )}
     </div>
   );
 }

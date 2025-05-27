@@ -38,11 +38,11 @@ const items = [
     href: "/inbox",
     icon: Mail,
   },
-  {
-    title: "Sent",
-    href: "/sent",
-    icon: Send,
-  },
+  // {
+  //   title: "Sent",
+  //   href: "/sent",
+  //   icon: Send,
+  // },
   {
     title: "Templates",
     href: "/templates",
