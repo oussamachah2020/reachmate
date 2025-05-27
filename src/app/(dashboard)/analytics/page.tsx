@@ -1,8 +1,7 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -10,151 +9,529 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  Area,
-  AreaChart,
-} from "recharts";
-import {
-  Mail,
-  Send,
-  Eye,
-  TrendingUp,
-  TrendingDown,
-  Users,
-  FileText,
-  Calendar,
-  Activity,
-  Download,
-  Filter,
-} from "lucide-react";
+import { Mail, Send, Eye, Users, Download, RefreshCw } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { useAuthStore } from "@/zustand/auth.store";
+import { toast } from "sonner";
 
-// Mock data - replace with real data from your Supabase queries
-const mockData = {
+// Import components
+import { StatCard } from "@/components/analytics/stat-card";
+import { CategoryBreakdownChart } from "@/components/analytics/category-breakdown-chart";
+import { TemplatePerformance } from "@/components/analytics/template-performance";
+import { RecentActivity } from "@/components/analytics/recent-activity";
+import { EmailTrendsChart } from "@/components/analytics/emails-trends-chart";
+import { PerformanceComparisonChart } from "@/components/analytics/performance-comparison";
+
+interface AnalyticsData {
   overview: {
-    totalEmails: 1247,
-    emailsThisMonth: 182,
-    totalTemplates: 34,
-    activeTemplates: 28,
-    openRate: 68.5,
-    responseRate: 23.2,
-  },
-  emailTrends: [
-    { date: "2024-01", sent: 45, opened: 32, responded: 12 },
-    { date: "2024-02", sent: 52, opened: 38, responded: 15 },
-    { date: "2024-03", sent: 61, opened: 42, responded: 18 },
-    { date: "2024-04", sent: 58, opened: 41, responded: 16 },
-    { date: "2024-05", sent: 73, opened: 51, responded: 22 },
-    { date: "2024-06", sent: 68, opened: 47, responded: 19 },
-  ],
-  templateUsage: [
-    {
-      name: "Welcome Email",
-      usage: 45,
-      category: "Onboarding",
-      performance: 78,
-    },
-    { name: "Follow-up", usage: 38, category: "Sales", performance: 65 },
-    { name: "Newsletter", usage: 32, category: "Marketing", performance: 72 },
-    { name: "Product Update", usage: 28, category: "Product", performance: 82 },
-    {
-      name: "Support Response",
-      usage: 24,
-      category: "Support",
-      performance: 91,
-    },
-  ],
-  categoryBreakdown: [
-    { name: "Marketing", value: 35, color: "#22c55e" },
-    { name: "Sales", value: 28, color: "#3b82f6" },
-    { name: "Support", value: 20, color: "#f59e0b" },
-    { name: "Product", value: 12, color: "#ef4444" },
-    { name: "Onboarding", value: 5, color: "#8b5cf6" },
-  ],
-  recentActivity: [
-    {
-      action: "Email sent",
-      template: "Welcome Email",
-      recipient: "john@example.com",
-      time: "2 minutes ago",
-    },
-    {
-      action: "Template created",
-      template: "New Product Launch",
-      recipient: null,
-      time: "1 hour ago",
-    },
-    {
-      action: "Email opened",
-      template: "Follow-up",
-      recipient: "sarah@company.com",
-      time: "3 hours ago",
-    },
-    {
-      action: "Template edited",
-      template: "Newsletter",
-      recipient: null,
-      time: "5 hours ago",
-    },
-  ],
-};
+    totalEmails: number;
+    emailsThisMonth: number;
+    totalTemplates: number;
+    activeTemplates: number;
+    openRate: number;
+    responseRate: number;
+    previousMonthEmails: number;
+    previousOpenRate: number;
+    previousResponseRate: number;
+  };
+  emailTrends: Array<{
+    date: string;
+    sent: number;
+    opened: number;
+    responded: number;
+  }>;
+  templateUsage: Array<{
+    id: string;
+    subject: string;
+    category?: string;
+    usage: number;
+    openRate: number;
+    responseRate: number;
+  }>;
+  categoryBreakdown: Array<{
+    name: string;
+    value: number;
+    color: string;
+    count: number;
+  }>;
+  recentActivity: Array<{
+    id: string;
+    type:
+      | "email_sent"
+      | "template_created"
+      | "email_opened"
+      | "template_edited";
+    templateSubject?: string;
+    recipientEmail?: string;
+    timestamp: string;
+  }>;
+}
 
-interface StatCardProps {
-  icon: React.ComponentType<{ className?: string }>; // Lucide icon component type
-  title: string; // Card title
-  value: string | number; // Main metric value
-  change?: string; // Optional percentage change
-  changeType?: "positive" | "negative"; // Optional change direction
+// Define types for Supabase query results
+interface TemplateWithCategory {
+  id: string;
+  subject: string | null;
+  body: string | null;
+  usedCount: number | null;
+  category: Array<{ name: string }> | null;
+}
+
+interface EmailWithRelations {
+  id: string;
+  sentAt: string;
+  isRead: boolean;
+  template: Array<{ subject: string | null }> | null;
+  receiver: Array<{ email: string }> | null;
+}
+
+interface EmailWithCategory {
+  id: string;
+  category: Array<{ id: string; name: string }> | null;
 }
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30");
   const [selectedMetric, setSelectedMetric] = useState("sent");
-
-  const StatCard = ({
-    icon: Icon,
-    title,
-    value,
-    change,
-    changeType,
-  }: StatCardProps) => (
-    <Card className="shadow-none">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between space-y-0 pb-2">
-          <div className="text-sm font-medium text-gray-600">{title}</div>
-          <Icon className="h-4 w-4 text-gray-400" />
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="text-2xl font-bold">{value}</div>
-          {change && (
-            <div
-              className={`flex items-center text-xs ${
-                changeType === "positive" ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {changeType === "positive" ? (
-                <TrendingUp className="h-3 w-3 mr-1" />
-              ) : (
-                <TrendingDown className="h-3 w-3 mr-1" />
-              )}
-              {change}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(
+    null
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuthStore();
+
+  const categoryColors = [
+    "#22c55e",
+    "#3b82f6",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#06b6d4",
+    "#84cc16",
+    "#f97316",
+    "#ec4899",
+    "#6366f1",
+  ];
+
+  // Fetch analytics data
+  const fetchAnalyticsData = async () => {
+    if (!user?.id) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log("Fetching analytics for user:", user.id);
+
+      // Calculate date ranges
+      const now = new Date();
+      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+      // Fetch overview data with correct field names from Prisma schema
+      const [
+        totalEmailsResult,
+        thisMonthEmailsResult,
+        previousMonthEmailsResult,
+        templatesResult,
+        categoriesResult,
+      ] = await Promise.all([
+        // Total emails sent by this user
+        supabase
+          .from("email_sent")
+          .select("id", { count: "exact", head: true })
+          .eq("senderId", user.id),
+
+        // This month's emails
+        supabase
+          .from("email_sent")
+          .select("id, isRead")
+          .eq("senderId", user.id)
+          .gte("sentAt", currentMonth.toISOString()),
+
+        // Previous month's emails for comparison
+        supabase
+          .from("email_sent")
+          .select("id, isRead")
+          .eq("senderId", user.id)
+          .gte("sentAt", previousMonth.toISOString())
+          .lt("sentAt", currentMonth.toISOString()),
+
+        // Templates created by this user
+        supabase
+          .from("template")
+          .select("id", { count: "exact", head: true })
+          .eq("senderId", user.id),
+
+        // Categories created by this user
+        supabase.from("category").select("id, name").eq("authorId", user.id),
+      ]);
+
+      console.log("Overview results:", {
+        totalEmails: totalEmailsResult.count,
+        thisMonthEmails: thisMonthEmailsResult.data?.length,
+        previousMonthEmails: previousMonthEmailsResult.data?.length,
+        totalTemplates: templatesResult.count,
+        categories: categoriesResult.data?.length,
+      });
+
+      // Calculate open rates
+      const thisMonthEmails = thisMonthEmailsResult.data || [];
+      const previousMonthEmails = previousMonthEmailsResult.data || [];
+
+      const thisMonthOpenRate =
+        thisMonthEmails.length > 0
+          ? (thisMonthEmails.filter((email) => email.isRead).length /
+              thisMonthEmails.length) *
+            100
+          : 0;
+
+      const previousMonthOpenRate =
+        previousMonthEmails.length > 0
+          ? (previousMonthEmails.filter((email) => email.isRead).length /
+              previousMonthEmails.length) *
+            100
+          : 0;
+
+      // Fetch email trends data (last 6 months)
+      const emailTrendsResult = await supabase
+        .from("email_sent")
+        .select("sentAt, isRead")
+        .eq("senderId", user.id)
+        .gte(
+          "sentAt",
+          new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()
+        )
+        .order("sentAt", { ascending: true });
+
+      console.log(
+        "Email trends data:",
+        emailTrendsResult.data?.length || 0,
+        "emails"
+      );
+
+      // Process trends data
+      const trendsMap = new Map();
+      emailTrendsResult.data?.forEach((email) => {
+        const date = new Date(email.sentAt);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+        if (!trendsMap.has(monthKey)) {
+          trendsMap.set(monthKey, {
+            date: monthKey,
+            sent: 0,
+            opened: 0,
+            responded: 0,
+          });
+        }
+
+        const monthData = trendsMap.get(monthKey);
+        monthData.sent++;
+        if (email.isRead) monthData.opened++;
+        // Note: Add responded tracking when implemented
+      });
+
+      const emailTrends = Array.from(trendsMap.values()).slice(-6);
+      console.log("Processed email trends:", emailTrends);
+
+      // First, get all templates without relations to check basic data
+      const templatesBasicResult = await supabase
+        .from("template")
+        .select("id, subject, body, usedCount, categoryId")
+        .eq("senderId", user.id);
+
+      console.log("Basic templates:", templatesBasicResult.data);
+
+      // Then get categories separately if needed
+      let templateUsage: any[] = [];
+
+      if (templatesBasicResult.data && templatesBasicResult.data.length > 0) {
+        // Get email counts for each template
+        templateUsage = await Promise.all(
+          templatesBasicResult.data.map(async (template) => {
+            const { data: emailData } = await supabase
+              .from("email_sent")
+              .select("id, isRead")
+              .eq("templateId", template.id);
+
+            const usage = emailData?.length || 0;
+            const opened =
+              emailData?.filter((email) => email.isRead).length || 0;
+            const openRate = usage > 0 ? (opened / usage) * 100 : 0;
+
+            // Get category name if categoryId exists
+            let categoryName = "Uncategorized";
+            if (template.categoryId) {
+              const { data: categoryData } = await supabase
+                .from("category")
+                .select("name")
+                .eq("id", template.categoryId)
+                .single();
+
+              if (categoryData) {
+                categoryName = categoryData.name;
+              }
+            }
+
+            return {
+              id: template.id,
+              subject: template.subject || "Untitled Template",
+              category: categoryName,
+              usage,
+              openRate,
+              responseRate: 0, // Implement response tracking later
+            };
+          })
+        );
+
+        templateUsage = templateUsage
+          .sort((a, b) => b.usage - a.usage)
+          .slice(0, 5);
+      }
+
+      console.log("Template usage:", templateUsage);
+
+      // Fetch category breakdown - get emails with categoryId directly
+      const categoryEmailsResult = await supabase
+        .from("email_sent")
+        .select("id, categoryId")
+        .eq("senderId", user.id)
+        .not("categoryId", "is", null);
+
+      console.log("Category emails raw:", categoryEmailsResult.data);
+
+      const categoryMap = new Map();
+      let totalCategorizedEmails = 0;
+
+      if (categoryEmailsResult.data) {
+        // Group by categoryId first
+        const categoryIds = [
+          ...new Set(
+            categoryEmailsResult.data.map((email) => email.categoryId)
+          ),
+        ];
+
+        for (const categoryId of categoryIds) {
+          if (categoryId) {
+            const { data: categoryData } = await supabase
+              .from("category")
+              .select("name")
+              .eq("id", categoryId)
+              .single();
+
+            if (categoryData) {
+              const count = categoryEmailsResult.data.filter(
+                (email) => email.categoryId === categoryId
+              ).length;
+              categoryMap.set(categoryData.name, count);
+              totalCategorizedEmails += count;
+            }
+          }
+        }
+      }
+
+      const categoryBreakdown = Array.from(categoryMap.entries())
+        .map(([name, count], index) => ({
+          name,
+          count: count as number,
+          value:
+            totalCategorizedEmails > 0
+              ? ((count as number) / totalCategorizedEmails) * 100
+              : 0,
+          color: categoryColors[index % categoryColors.length],
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      console.log("Category breakdown:", categoryBreakdown);
+
+      // Fetch recent activity - get basic email data first
+      const recentActivityResult = await supabase
+        .from("email_sent")
+        .select("id, sentAt, isRead, templateId, receiverId")
+        .eq("senderId", user.id)
+        .order("sentAt", { ascending: false })
+        .limit(10);
+
+      console.log("Recent activity raw:", recentActivityResult.data);
+
+      let recentActivity: any[] = [];
+
+      if (recentActivityResult.data) {
+        recentActivity = await Promise.all(
+          recentActivityResult.data.map(async (email) => {
+            // Get template subject
+            let templateSubject = "No Subject";
+            if (email.templateId) {
+              const { data: templateData } = await supabase
+                .from("template")
+                .select("subject")
+                .eq("id", email.templateId)
+                .single();
+
+              if (templateData) {
+                templateSubject = templateData.subject || "No Subject";
+              }
+            }
+
+            // Get receiver email
+            let recipientEmail;
+            if (email.receiverId) {
+              const { data: receiverData } = await supabase
+                .from("user")
+                .select("email")
+                .eq("id", email.receiverId)
+                .single();
+
+              if (receiverData) {
+                recipientEmail = receiverData.email;
+              }
+            }
+
+            return {
+              id: email.id,
+              type: "email_sent" as const,
+              templateSubject,
+              recipientEmail,
+              timestamp: email.sentAt,
+            };
+          })
+        );
+      }
+
+      console.log("Recent activity processed:", recentActivity);
+
+      // Compile all data
+      const analyticsData: AnalyticsData = {
+        overview: {
+          totalEmails: totalEmailsResult.count || 0,
+          emailsThisMonth: thisMonthEmailsResult.data?.length || 0,
+          totalTemplates: templatesResult.count || 0,
+          activeTemplates: templatesResult.count || 0,
+          openRate: thisMonthOpenRate,
+          responseRate: 0, // Implement response tracking
+          previousMonthEmails: previousMonthEmailsResult.data?.length || 0,
+          previousOpenRate: previousMonthOpenRate,
+          previousResponseRate: 0,
+        },
+        emailTrends,
+        templateUsage,
+        categoryBreakdown,
+        recentActivity,
+      };
+
+      console.log("Final analytics data:", analyticsData);
+      setAnalyticsData(analyticsData);
+    } catch (error) {
+      console.error("Error fetching analytics data:", error);
+      setError("Failed to load analytics data");
+      toast.error("Failed to load analytics data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [user?.id, timeRange]);
+
+  const calculateChange = (
+    current: number,
+    previous: number
+  ): { change: string; type: "positive" | "negative" } => {
+    if (previous === 0) return { change: "+100%", type: "positive" };
+    const changePercent = ((current - previous) / previous) * 100;
+    return {
+      change: `${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(1)}%`,
+      type: changePercent >= 0 ? "positive" : "negative",
+    };
+  };
+
+  const handleExport = async () => {
+    if (!analyticsData) return;
+
+    const csvData = [
+      ["Metric", "Value"],
+      ["Total Emails", analyticsData.overview.totalEmails],
+      ["Emails This Month", analyticsData.overview.emailsThisMonth],
+      ["Open Rate", `${analyticsData.overview.openRate.toFixed(2)}%`],
+      ["Response Rate", `${analyticsData.overview.responseRate.toFixed(2)}%`],
+      ["Total Templates", analyticsData.overview.totalTemplates],
+    ];
+
+    const csvContent = csvData.map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `analytics-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Analytics data exported successfully");
+  };
+
+  const handleRefresh = () => {
+    fetchAnalyticsData();
+    toast.success("Analytics data refreshed");
+  };
+
+  // Error state
+  if (error && !isLoading) {
+    return (
+      <div className="space-y-6 py-6 px-2">
+        <div className="flex items-center justify-center h-64 text-red-500">
+          <div className="text-center">
+            <div className="text-4xl mb-2">⚠️</div>
+            <p className="text-lg font-medium">Failed to load analytics</p>
+            <p className="text-sm">{error}</p>
+            <Button onClick={handleRefresh} variant="outline" className="mt-4">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (!analyticsData && isLoading) {
+    return (
+      <div className="space-y-6 py-6 px-2 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 w-32 bg-gray-200 rounded mb-2"></div>
+            <div className="h-4 w-64 bg-gray-200 rounded"></div>
+          </div>
+          <div className="flex space-x-2">
+            <div className="h-10 w-32 bg-gray-200 rounded"></div>
+            <div className="h-10 w-24 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 bg-gray-200 rounded"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!analyticsData) return null;
+
+  const overviewChange = {
+    emailsThisMonth: calculateChange(
+      analyticsData.overview.emailsThisMonth,
+      analyticsData.overview.previousMonthEmails
+    ),
+    openRate: calculateChange(
+      analyticsData.overview.openRate,
+      analyticsData.overview.previousOpenRate
+    ),
+    responseRate: calculateChange(
+      analyticsData.overview.responseRate,
+      analyticsData.overview.previousResponseRate
+    ),
+  };
 
   return (
     <div className="space-y-6 py-6 px-2">
@@ -168,7 +545,7 @@ export default function AnalyticsPage() {
         </div>
         <div className="flex items-center space-x-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -178,7 +555,11 @@ export default function AnalyticsPage() {
               <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -190,245 +571,73 @@ export default function AnalyticsPage() {
         <StatCard
           icon={Send}
           title="Total Emails Sent"
-          value={mockData.overview.totalEmails.toLocaleString()}
+          value={analyticsData.overview.totalEmails.toLocaleString()}
           change="+12.5%"
           changeType="positive"
         />
         <StatCard
           icon={Mail}
           title="This Month"
-          value={mockData.overview.emailsThisMonth}
-          change="+8.2%"
-          changeType="positive"
+          value={analyticsData.overview.emailsThisMonth}
+          change={overviewChange.emailsThisMonth.change}
+          changeType={overviewChange.emailsThisMonth.type}
         />
         <StatCard
           icon={Eye}
           title="Open Rate"
-          value={`${mockData.overview.openRate}%`}
-          change="+2.1%"
-          changeType="positive"
+          value={`${analyticsData.overview.openRate.toFixed(1)}%`}
+          change={overviewChange.openRate.change}
+          changeType={overviewChange.openRate.type}
         />
         <StatCard
           icon={Users}
           title="Response Rate"
-          value={`${mockData.overview.responseRate}%`}
-          change="-1.3%"
-          changeType="negative"
+          value={`${analyticsData.overview.responseRate.toFixed(1)}%`}
+          change={overviewChange.responseRate.change}
+          changeType={overviewChange.responseRate.type}
         />
       </div>
 
       {/* Charts Row */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Email Trends */}
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Email Performance Trends</span>
-              <Select value={selectedMetric} onValueChange={setSelectedMetric}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="opened">Opened</SelectItem>
-                  <SelectItem value="responded">Responded</SelectItem>
-                </SelectContent>
-              </Select>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={mockData.emailTrends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" stroke="#666" fontSize={12} />
-                <YAxis stroke="#666" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    background: "white",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey={selectedMetric}
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  fill="#22c55e"
-                  fillOpacity={0.1}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Category Breakdown */}
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle>Email Categories</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={mockData.categoryBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {mockData.categoryBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "white",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {mockData.categoryBreakdown.map((category, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  />
-                  <span className="text-sm text-gray-600">{category.name}</span>
-                  <span className="text-sm font-medium">{category.value}%</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <EmailTrendsChart
+          data={analyticsData.emailTrends}
+          selectedMetric={selectedMetric}
+          onMetricChange={setSelectedMetric}
+          isLoading={false}
+        />
+        <CategoryBreakdownChart
+          data={analyticsData.categoryBreakdown}
+          isLoading={false}
+        />
       </div>
 
       {/* Template Performance and Activity */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Top Templates */}
-        <Card className="lg:col-span-2 shadow-none">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5" />
-              <span>Top Performing Templates</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockData.templateUsage.map((template, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">
-                      {template.name}
-                    </h4>
-                    <div className="flex items-center space-x-4 mt-1">
-                      <Badge variant="outline" className="text-xs">
-                        {template.category}
-                      </Badge>
-                      <span className="text-sm text-gray-500">
-                        Used {template.usage} times
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-green-600">
-                      {template.performance}%
-                    </div>
-                    <div className="text-xs text-gray-500">Success Rate</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5" />
-              <span>Recent Activity</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {mockData.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
-                      {activity.action}
-                    </p>
-                    <p className="text-sm text-gray-600 truncate">
-                      {activity.template}
-                    </p>
-                    {activity.recipient && (
-                      <p className="text-xs text-gray-500 truncate">
-                        To: {activity.recipient}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-1">
-                      {activity.time}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <TemplatePerformance
+          data={analyticsData.templateUsage}
+          isLoading={false}
+        />
+        <RecentActivity data={analyticsData.recentActivity} isLoading={false} />
       </div>
 
-      {/* Performance Metrics */}
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle>Monthly Performance Comparison</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={mockData.emailTrends}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" stroke="#666" fontSize={12} />
-              <YAxis stroke="#666" fontSize={12} />
-              <Tooltip
-                contentStyle={{
-                  background: "white",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                }}
-              />
-              <Bar
-                dataKey="sent"
-                fill="#22c55e"
-                name="Emails Sent"
-                radius={[2, 2, 0, 0]}
-              />
-              <Bar
-                dataKey="opened"
-                fill="#3b82f6"
-                name="Emails Opened"
-                radius={[2, 2, 0, 0]}
-              />
-              <Bar
-                dataKey="responded"
-                fill="#f59e0b"
-                name="Responses"
-                radius={[2, 2, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {!isLoading && analyticsData.overview.totalEmails === 0 && (
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          <div className="text-center">
+            <div className="text-6xl mb-4">📊</div>
+            <h3 className="text-xl font-semibold mb-2">No Data Available</h3>
+            <p className="text-gray-400 mb-4">
+              Start sending emails to see your analytics data
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => (window.location.href = "/inbox")}
+            >
+              Go to Inbox
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

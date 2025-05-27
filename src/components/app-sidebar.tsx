@@ -10,6 +10,7 @@ import {
   Send,
   Settings,
   Link,
+  History,
 } from "lucide-react";
 
 import {
@@ -49,9 +50,9 @@ const items = [
     icon: FileText,
   },
   {
-    title: "Contacts",
-    href: "/contacts",
-    icon: Users,
+    title: "History",
+    href: "/history",
+    icon: History,
   },
   {
     title: "Analytics",
