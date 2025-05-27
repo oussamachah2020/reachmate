@@ -1,22 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import parse from "html-react-parser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Paperclip, Star, Archive, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/zustand/auth.store";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Email } from "@/types/inbox";
+import { ConfirmationAlert } from "../confirmation-alert";
 
 interface EmailListProps {
   activeEmail: string | null;
   setActiveEmail: (emailId: string | null) => void;
   emailList: Email[];
   setEmailList: (emails: Email[]) => void;
+  selectedEmails: string[];
+  setSelectedEmails: (emails: string[]) => void;
 }
 
 export function EmailList({
@@ -24,37 +27,50 @@ export function EmailList({
   setActiveEmail,
   emailList,
   setEmailList,
+  selectedEmails,
+  setSelectedEmails,
 }: EmailListProps) {
-  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [starredEmails, setStarredEmails] = useState<Set<string>>(new Set());
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { user } = useAuthStore();
 
+  // Initialize starred emails from the email list
   useEffect(() => {
-    async function fetchEmails() {
-      const { data: emails, error } = await supabase
-        .from("email_sent")
-        .select(
-          `id, sentAt, isRead, archived, 
-          category(id, name), tag(id, name), 
-          sender(id, firstName, lastName, email), 
-          receiver(id, email), 
-          attachment(id, fileUrl, fileName, fileType),
-          template(id, body, subject)`
-        )
-        .eq("senderId", user?.id)
-        .order("sentAt", { ascending: false });
+    const starredSet = new Set<string>();
+    emailList.forEach((email) => {
+      if (email.starred) {
+        starredSet.add(email.id);
+      }
+    });
+    setStarredEmails(starredSet);
+  }, [emailList]);
 
-      if (error || emails === null) {
-        toast.error("Error fetching emails");
+  async function markAsRead(emailId: string) {
+    try {
+      const { error } = await supabase
+        .from("email_sent")
+        .update({
+          isRead: true,
+        })
+        .eq("id", emailId);
+
+      if (error) {
+        toast.error("Something went wrong, click on the email again please");
+        console.error(error);
         return;
       }
 
-      setEmailList(emails as unknown as Email[]);
-      if (emails.length > 0) setActiveEmail(emails[0].id);
+      // Update local state
+      setEmailList(
+        emailList.map((email) =>
+          email.id === emailId ? { ...email, isRead: true } : email
+        )
+      );
+    } catch (error) {
+      toast.error("Failed to mark this email as read");
+      console.error(error);
     }
-
-    fetchEmails();
-  }, [user]);
+  }
 
   const toggleEmailSelection = (emailId: string) => {
     if (selectedEmails.includes(emailId)) {
@@ -72,14 +88,99 @@ export function EmailList({
     }
   };
 
-  const toggleStar = (emailId: string) => {
+  async function handleArchiving() {
+    try {
+      if (selectedEmails.length === 0) {
+        toast.info("No emails selected");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("email_sent")
+        .update({
+          archived: true,
+        })
+        .in("id", selectedEmails);
+
+      if (error) throw error;
+
+      // Remove archived emails from local state
+      setEmailList(
+        emailList.filter((email) => !selectedEmails.includes(email.id))
+      );
+      setSelectedEmails([]);
+      toast.success(`${selectedEmails.length} emails archived`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to archive the selected emails");
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      if (selectedEmails.length === 0) {
+        toast.info("No emails selected");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("email_sent")
+        .delete()
+        .in("id", selectedEmails);
+
+      if (error) throw error;
+
+      // Remove deleted emails from local state
+      setEmailList(
+        emailList.filter((email) => !selectedEmails.includes(email.id))
+      );
+      setSelectedEmails([]);
+      toast.success(`${selectedEmails.length} emails deleted`);
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete the selected emails");
+    }
+  }
+
+  const toggleStar = async (emailId: string) => {
+    const isCurrentlyStarred = starredEmails.has(emailId);
     const newStarred = new Set(starredEmails);
-    if (newStarred.has(emailId)) {
+
+    if (isCurrentlyStarred) {
       newStarred.delete(emailId);
     } else {
       newStarred.add(emailId);
     }
+
     setStarredEmails(newStarred);
+
+    try {
+      const { error } = await supabase
+        .from("email_sent")
+        .update({ starred: !isCurrentlyStarred })
+        .eq("id", emailId);
+
+      if (error) {
+        // Revert local state on error
+        setStarredEmails(starredEmails);
+        throw error;
+      }
+
+      // Update local email list state
+      setEmailList(
+        emailList.map((email) =>
+          email.id === emailId
+            ? { ...email, starred: !isCurrentlyStarred }
+            : email
+        )
+      );
+
+      toast.success(`Email ${!isCurrentlyStarred ? "starred" : "unstarred"}`);
+    } catch (error) {
+      console.error("Error updating star status:", error);
+      toast.error("Failed to update star status");
+    }
   };
 
   function truncateHtml(html: string, maxLength = 120) {
@@ -111,8 +212,9 @@ export function EmailList({
       <div className="flex h-14 items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4">
         <div className="flex items-center space-x-3">
           <Checkbox
-            checked={
-              selectedEmails.length === emailList.length && emailList.length > 0
+            defaultChecked={
+              selectedEmails?.length === emailList?.length &&
+              emailList?.length > 0
             }
             onCheckedChange={toggleAllEmails}
             className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
@@ -138,12 +240,21 @@ export function EmailList({
 
         {selectedEmails.length > 0 && (
           <div className="flex items-center space-x-2">
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleArchiving}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              title="Archive selected"
+            >
               <Archive className="h-4 w-4" />
-            </button>
-            <button className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
-              <Trash2 className="h-4 w-4" />
-            </button>
+            </Button>
+            <ConfirmationAlert
+              isOpen={isDeleteDialogOpen}
+              setIsOpen={setIsDeleteDialogOpen}
+              action={handleDelete}
+              description={`This action cannot be undone. This will permanently delete ${selectedEmails.length} selected email(s).`}
+            />
           </div>
         )}
       </div>
@@ -155,7 +266,7 @@ export function EmailList({
             <div className="text-center">
               <div className="text-4xl mb-2">📭</div>
               <p className="text-lg font-medium">No emails found</p>
-              <p className="text-sm">Your sent emails will appear here</p>
+              <p className="text-sm">Your emails will appear here</p>
             </div>
           </div>
         ) : (
@@ -169,9 +280,17 @@ export function EmailList({
                   : "",
                 !email.isRead
                   ? "bg-gradient-to-r from-green-50/30 to-transparent"
+                  : "",
+                selectedEmails.includes(email.id)
+                  ? "bg-blue-50 border-l-4 border-l-blue-500"
                   : ""
               )}
-              onClick={() => setActiveEmail(email.id)}
+              onClick={() => {
+                setActiveEmail(email.id);
+                if (!email.isRead) {
+                  markAsRead(email.id);
+                }
+              }}
             >
               {/* Selection and Star Column */}
               <div className="mr-4 flex flex-col items-center justify-start space-y-3 pt-1">
@@ -182,7 +301,12 @@ export function EmailList({
                   className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
                 />
                 <button
-                  className="text-gray-300 hover:text-amber-400 transition-colors opacity-0 group-hover:opacity-100"
+                  className={cn(
+                    "text-gray-300 hover:text-amber-400 transition-colors",
+                    starredEmails.has(email.id)
+                      ? "text-amber-400"
+                      : "opacity-0 group-hover:opacity-100"
+                  )}
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleStar(email.id);
@@ -233,6 +357,9 @@ export function EmailList({
                     </span>
                     {!email.isRead && (
                       <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    )}
+                    {starredEmails.has(email.id) && (
+                      <Star className="h-3 w-3 text-amber-400 fill-amber-400 flex-shrink-0" />
                     )}
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0 ml-2">

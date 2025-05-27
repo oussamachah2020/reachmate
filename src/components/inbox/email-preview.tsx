@@ -25,7 +25,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Email } from "@/types/inbox";
-import { cn } from "@/lib/utils";
 
 interface EmailPreviewProps {
   activeEmail: string | null;
@@ -33,23 +32,19 @@ interface EmailPreviewProps {
 }
 
 export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
-  // Find the current email from the list
   const currentEmail = emailList.find((email) => email.id === activeEmail);
 
-  // Find current email index for navigation
   const currentIndex = emailList.findIndex((email) => email.id === activeEmail);
   const canGoPrevious = currentIndex > 0;
   const canGoNext = currentIndex < emailList.length - 1;
 
   const handleDownload = async (fileUrl: string, fileName: string) => {
     try {
-      // Create a temporary anchor element to trigger download
       const link = document.createElement("a");
       link.href = fileUrl;
       link.download = fileName;
       link.target = "_blank";
 
-      // For external URLs or if CORS is an issue, we might need to fetch first
       try {
         const response = await fetch(fileUrl);
         if (response.ok) {
@@ -57,24 +52,19 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
           const objectUrl = URL.createObjectURL(blob);
           link.href = objectUrl;
 
-          // Trigger download
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
 
-          // Clean up object URL
           URL.revokeObjectURL(objectUrl);
         } else {
-          // Fallback: open in new tab if fetch fails
           window.open(fileUrl, "_blank");
         }
       } catch (fetchError) {
-        // Fallback: open in new tab if fetch fails
         window.open(fileUrl, "_blank");
       }
     } catch (error) {
       console.error("Download failed:", error);
-      // Last resort: try to open the URL directly
       window.open(fileUrl, "_blank");
     }
   };
@@ -109,7 +99,6 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
     });
   };
 
-  // If no email is selected, show empty state
   if (!currentEmail) {
     return (
       <div className="flex w-full h-full flex-col items-center justify-center bg-gray-50/30">
@@ -132,7 +121,6 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
 
   return (
     <div className="flex w-full h-full flex-col bg-white">
-      {/* Email preview header */}
       <div className="flex items-center justify-between border-b bg-white p-4">
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden">
@@ -182,7 +170,6 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
         </div>
       </div>
 
-      {/* Email actions */}
       <div className="flex items-center justify-between border-b bg-white p-2">
         <div className="flex items-center space-x-1">
           <Button

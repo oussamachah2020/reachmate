@@ -358,7 +358,7 @@ export function TemplatesList({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, fetchTemplates]);
+  }, [user]);
 
   // Show empty state when no templates match search
   if (filteredAndSortedTemplates.length === 0 && searchQuery.trim()) {

@@ -42,6 +42,7 @@ model EmailSent {
   sentAt     DateTime   @default(now())
   isRead     Boolean    @default(false)
   archived   Boolean    @default(false)
+  starred   Boolean    @default(false)
 
   categoryId String?    @db.Uuid 
   category   Category?  @relation(fields: [categoryId], references: [id])
