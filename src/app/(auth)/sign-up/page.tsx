@@ -316,21 +316,6 @@ export default function SignUpPage() {
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
             </form>
-
-            <div className="mt-4 flex justify-center items-center w-full">
-              <div className="w-52 h-0.5 bg-gray-300" />
-              <span className="mx-2 text-sm text-gray-400">OR</span>
-              <div className="w-52 h-0.5 bg-gray-300" />
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Button variant="outline" className="w-full">
-                Google
-              </Button>
-              <Button variant="outline" className="w-full">
-                Microsoft
-              </Button>
-            </div>
           </CardContent>
           <CardFooter className="flex justify-center my-3">
             <p className="text-sm text-gray-600">

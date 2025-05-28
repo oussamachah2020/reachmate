@@ -67,27 +67,6 @@ interface AnalyticsData {
   }>;
 }
 
-// Define types for Supabase query results
-interface TemplateWithCategory {
-  id: string;
-  subject: string | null;
-  body: string | null;
-  usedCount: number | null;
-  category: Array<{ name: string }> | null;
-}
-
-interface EmailWithRelations {
-  id: string;
-  sentAt: string;
-  isRead: boolean;
-  template: Array<{ subject: string | null }> | null;
-  receiver: Array<{ email: string }> | null;
-}
-
-interface EmailWithCategory {
-  id: string;
-  category: Array<{ id: string; name: string }> | null;
-}
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30");
@@ -288,16 +267,12 @@ export default function AnalyticsPage() {
           .slice(0, 5);
       }
 
-      console.log("Template usage:", templateUsage);
-
       // Fetch category breakdown - get emails with categoryId directly
       const categoryEmailsResult = await supabase
         .from("email_sent")
         .select("id, categoryId")
         .eq("senderId", user.id)
         .not("categoryId", "is", null);
-
-      console.log("Category emails raw:", categoryEmailsResult.data);
 
       const categoryMap = new Map();
       let totalCategorizedEmails = 0;
@@ -335,13 +310,11 @@ export default function AnalyticsPage() {
           count: count as number,
           value:
             totalCategorizedEmails > 0
-              ? ((count as number) / totalCategorizedEmails) * 100
+              ? Number(((count as number) / totalCategorizedEmails) * 100)
               : 0,
           color: categoryColors[index % categoryColors.length],
         }))
         .sort((a, b) => b.count - a.count);
-
-      console.log("Category breakdown:", categoryBreakdown);
 
       // Fetch recent activity - get basic email data first
       const recentActivityResult = await supabase
@@ -350,8 +323,6 @@ export default function AnalyticsPage() {
         .eq("senderId", user.id)
         .order("sentAt", { ascending: false })
         .limit(10);
-
-      console.log("Recent activity raw:", recentActivityResult.data);
 
       let recentActivity: any[] = [];
 
@@ -397,8 +368,6 @@ export default function AnalyticsPage() {
         );
       }
 
-      console.log("Recent activity processed:", recentActivity);
-
       // Compile all data
       const analyticsData: AnalyticsData = {
         overview: {
@@ -418,10 +387,8 @@ export default function AnalyticsPage() {
         recentActivity,
       };
 
-      console.log("Final analytics data:", analyticsData);
       setAnalyticsData(analyticsData);
     } catch (error) {
-      console.error("Error fetching analytics data:", error);
       setError("Failed to load analytics data");
       toast.error("Failed to load analytics data");
     } finally {
