@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { RecentEmails } from "@/components/dashboard/recent-emails";
-import { EmailTemplates } from "@/components/dashboard/email-templates";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { UpcomingScheduled } from "@/components/dashboard/upcoming-scheduled";
 
@@ -29,7 +28,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <EmailTemplates />
+      {/* <EmailTemplates /> */}
     </div>
   );
 }

@@ -29,6 +29,7 @@ const AuthLayout = ({ children }: Props) => {
     setHasHydrated(true);
   }, []);
 
+
   useEffect(() => {
     if (hasHydrated && session && user) {
       router.replace("/home");

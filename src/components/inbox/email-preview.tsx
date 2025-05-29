@@ -101,7 +101,7 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
 
   if (!currentEmail) {
     return (
-      <div className="flex w-full h-full flex-col items-center justify-center bg-gray-50/30">
+      <div className="flex w-full h-full flex-col items-center justify-center ">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
             <Mail className="w-8 h-8 text-gray-400" />
@@ -120,8 +120,8 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
   }
 
   return (
-    <div className="flex w-full h-full flex-col bg-white">
-      <div className="flex items-center justify-between border-b bg-white p-4">
+    <div className="flex w-full h-full flex-col ">
+      <div className="flex items-center justify-between border-b p-4">
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <Button variant="ghost" size="icon" className="md:hidden">
             <ChevronLeft className="h-4 w-4" />
@@ -133,7 +133,7 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
             {currentEmail.category && (
               <Badge
                 variant="secondary"
-                className="text-xs bg-gray-100 text-gray-600"
+                className="text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 {currentEmail.category.name}
               </Badge>
@@ -141,7 +141,7 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
             {currentEmail.tag && (
               <Badge
                 variant="outline"
-                className="text-xs border-green-200 text-green-600 bg-green-50"
+                className="text-xs border-green-200 text-green-600 bg-green-50 dark:border-green-700 dark:text-green-400 dark:bg-green-900"
               >
                 {currentEmail.tag.name}
               </Badge>
@@ -170,29 +170,17 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-b bg-white p-2">
+      <div className="flex items-center justify-between border-b  p-2">
         <div className="flex items-center space-x-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-          >
+          <Button variant="ghost" size="sm" className="h-8 ">
             <Reply className="mr-2 h-4 w-4" />
             Reply
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-          >
+          <Button variant="ghost" size="sm" className="h-8 ">
             <ReplyAll className="mr-2 h-4 w-4" />
             Reply All
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-          >
+          <Button variant="ghost" size="sm" className="h-8 ">
             <Forward className="mr-2 h-4 w-4" />
             Forward
           </Button>
@@ -208,7 +196,7 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
+            className="h-8 w-8 hover:bg-red-50 hover:text-red-500"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -245,27 +233,25 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
                 src="/placeholder.svg"
                 alt={`${currentEmail.sender.firstName} ${currentEmail.sender.lastName}`}
               />
-              <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white font-semibold">
+              <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600  font-semibold">
                 {currentEmail.sender.firstName.charAt(0)}
                 {currentEmail.sender.lastName.charAt(0)}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
-                <h3 className="font-semibold text-gray-900">
+                <h3 className="font-semibold ">
                   {currentEmail.sender.firstName} {currentEmail.sender.lastName}
                 </h3>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm ">
                   &lt;{currentEmail.sender.email}&gt;
                 </span>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm ">
                 <span className="font-medium">To: </span>
                 <span>{currentEmail.receiver.email}</span>
               </div>
-              <div className="text-sm text-gray-500">
-                {formatDate(currentEmail.sentAt)}
-              </div>
+              <div className="text-sm ">{formatDate(currentEmail.sentAt)}</div>
             </div>
           </div>
           {!currentEmail.isRead && (
@@ -277,20 +263,18 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
         <div className="prose prose-sm max-w-none">
           {currentEmail.template?.body ? (
             <div
-              className="text-gray-800 leading-relaxed"
+              className="leading-relaxed"
               dangerouslySetInnerHTML={{ __html: currentEmail.template.body }}
             />
           ) : (
-            <div className="text-gray-500 italic">
-              No content available for this email.
-            </div>
+            <div className=" italic">No content available for this email.</div>
           )}
         </div>
 
         {/* Attachments */}
         {currentEmail.attachment && currentEmail.attachment.length > 0 && (
           <div className="mt-8 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
-            <h4 className="mb-3 flex items-center text-sm font-semibold text-gray-700">
+            <h4 className="mb-3 flex items-center text-sm font-semibold">
               <Paperclip className="mr-2 h-4 w-4" />
               Attachments ({currentEmail.attachment.length})
             </h4>
@@ -318,7 +302,7 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-gray-500 hover:text-green-600 hover:bg-green-50"
+                    className="h-8 w-8  hover:text-green-600 hover:bg-green-50"
                     onClick={() =>
                       handleDownload(attachment.fileUrl, attachment.fileName)
                     }

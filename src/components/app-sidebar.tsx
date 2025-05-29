@@ -2,14 +2,9 @@ import {
   LayoutDashboard,
   Mail,
   FileText,
-  Users,
   BarChart2,
   HelpCircle,
-  Menu,
-  X,
-  Send,
   Settings,
-  Link,
   History,
 } from "lucide-react";
 
@@ -23,9 +18,11 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import Logo from "@/../public/logo-2.svg";
+import WhiteLogo from "@/../public/logo-white.svg";
 import { Separator } from "./ui/separator";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 
 // Menu items.
 const items = [
@@ -64,21 +61,22 @@ const items = [
     href: "/settings",
     icon: Settings,
   },
-  {
-    title: "Help",
-    href: "/help",
-    icon: HelpCircle,
-  },
+  // {
+  //   title: "Help",
+  //   href: "/help",
+  //   icon: HelpCircle,
+  // },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { theme } = useTheme();
 
   return (
     <Sidebar>
-      <SidebarContent className="bg-white">
+      <SidebarContent>
         <img
-          src={Logo.src}
+          src={theme === "dark" ? WhiteLogo.src : Logo.src}
           alt="reachmate-logo"
           className="pl-3 pt-4 pb-2 w-40 h-auto"
         />
@@ -95,7 +93,7 @@ export function AppSidebar() {
                         "flex items-center rounded-md text-lg px-3 py-2 ",
                         pathname === item.href
                           ? "bg-primary/10 text-primary"
-                          : "text-gray-700 hover:bg-gray-100"
+                          : ""
                       )}
                     >
                       <item.icon />

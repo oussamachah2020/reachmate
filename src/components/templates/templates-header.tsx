@@ -60,7 +60,7 @@ export function TemplatesHeader({
           trigger={
             <Button
               onClick={() => setOpen(true)}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 text-white hover:bg-green-700"
             >
               <Plus className="mr-2 h-4 w-4" />
               Create Template
@@ -105,7 +105,7 @@ export function TemplatesHeader({
             </SelectContent>
           </Select>
 
-          <div className="flex items-center rounded-md border bg-white p-1">
+          <div className="flex items-center rounded-md border  p-1">
             <Button
               variant={viewMode === "grid" ? "default" : "ghost"}
               size="icon"

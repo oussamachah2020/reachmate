@@ -300,7 +300,7 @@ export default function ComposeEmailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen ">
       <div className="max-w-4xl mx-auto p-6">
         {/* Simple Header */}
         <div className="flex items-center mb-6">

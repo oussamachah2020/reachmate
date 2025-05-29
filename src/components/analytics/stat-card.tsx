@@ -43,7 +43,7 @@ export function StatCard({
     <Card className="shadow-none h-28">
       <CardContent>
         <div className="flex items-center justify-between space-y-0 pb-2">
-          <div className="text-sm font-medium text-gray-600">{title}</div>
+          <div className="text-sm font-medium ">{title}</div>
           <Icon className="h-4 w-4 text-gray-400" />
         </div>
         <div className="flex items-center space-x-2">

@@ -81,7 +81,7 @@ export function TemplatesList({
         );
         return text.replace(
           regex,
-          '<mark class="bg-yellow-200 text-yellow-900 px-1 rounded">$1</mark>'
+          '<mark class="bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-1 rounded">$1</mark>'
         );
       } catch (error) {
         return text;
@@ -364,13 +364,13 @@ export function TemplatesList({
   if (filteredAndSortedTemplates.length === 0 && searchQuery.trim()) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Search className="w-8 h-8 text-gray-400" />
+        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+          <Search className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-lg font-medium text-foreground mb-2">
           No templates found
         </h3>
-        <p className="text-gray-500 mb-4 max-w-md">
+        <p className="text-muted-foreground mb-4 max-w-md">
           No templates match your search for "{searchQuery}". Try adjusting your
           search terms or create a new template.
         </p>
@@ -382,13 +382,13 @@ export function TemplatesList({
   if (templates.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <FileText className="w-8 h-8 text-gray-400" />
+        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+          <FileText className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-lg font-medium text-foreground mb-2">
           No templates yet
         </h3>
-        <p className="text-gray-500 mb-4">
+        <p className="text-muted-foreground mb-4">
           Get started by creating your first email template.
         </p>
       </div>
@@ -406,16 +406,16 @@ export function TemplatesList({
       {filteredAndSortedTemplates.map((template) => (
         <Card
           key={template.id}
-          className={`group relative overflow-hidden border rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 ${
+          className={`group relative overflow-hidden border rounded-lg shadow-sm hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 ${
             viewMode === "list" ? "flex h-36" : "flex flex-col"
-          } ${searchQuery.trim() ? "ring-1 ring-green-200" : ""}`}
+          } ${searchQuery.trim() ? "ring-1 ring-green-200 dark:ring-green-800" : ""}`}
           onMouseEnter={() => setHoveredTemplate(template.id)}
           onMouseLeave={() => setHoveredTemplate(null)}
         >
           <CardContent className="p-0">
-            <div className="relative h-48 bg-gray-50 p-6 flex items-center justify-center border-b">
+            <div className="relative h-48 p-6 flex items-center justify-center border-b border-border">
               {hoveredTemplate === template.id && (
-                <div className="absolute inset-0 bg-black/5 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-200">
+                <div className="absolute inset-0 bg-black/5 dark:bg-black/20 backdrop-blur-[1px] flex items-center justify-center transition-opacity duration-200">
                   <div className="flex gap-2">
                     <PreviewDialog
                       openPreview={openPreview}
@@ -424,7 +424,7 @@ export function TemplatesList({
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="bg-white hover:bg-gray-100"
+                          className="bg-background hover:bg-accent text-foreground"
                           onClick={() => setOpenPreview(true)}
                         >
                           <Eye className="mr-1 h-4 w-4" />
@@ -439,7 +439,7 @@ export function TemplatesList({
                       trigger={
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700"
+                          className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
                           onClick={() => handleEdit(template)}
                         >
                           <Edit className="mr-1 h-4 w-4" />
@@ -451,7 +451,7 @@ export function TemplatesList({
                 </div>
               )}
               <p
-                className="text-sm text-gray-600 line-clamp-4 text-center"
+                className="text-sm text-muted-foreground line-clamp-4 text-center"
                 dangerouslySetInnerHTML={{
                   __html: highlightSearchTerm(
                     getPlainTextPreview(template.body),
@@ -463,7 +463,7 @@ export function TemplatesList({
             <div className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3
-                  className="text-lg font-medium text-gray-900 line-clamp-1"
+                  className="text-lg font-medium text-foreground line-clamp-1"
                   dangerouslySetInnerHTML={{
                     __html: highlightSearchTerm(template.subject, searchQuery),
                   }}
@@ -471,7 +471,7 @@ export function TemplatesList({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
@@ -519,10 +519,10 @@ export function TemplatesList({
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-red-600 cursor-pointer"
+                      className="text-destructive cursor-pointer focus:text-destructive"
                       onClick={() => handleTemplateDelete(template.id)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -530,7 +530,7 @@ export function TemplatesList({
               </div>
               {template.description && (
                 <p
-                  className="text-sm text-gray-500 line-clamp-2 mb-3"
+                  className="text-sm text-muted-foreground line-clamp-2 mb-3"
                   dangerouslySetInnerHTML={{
                     __html: highlightSearchTerm(
                       template.description,
@@ -547,7 +547,7 @@ export function TemplatesList({
                       template.tag.name
                         .toLowerCase()
                         .includes(searchQuery.toLowerCase())
-                        ? "border-green-300 bg-green-50 text-green-700"
+                        ? "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300"
                         : ""
                     }`}
                   >
@@ -564,18 +564,18 @@ export function TemplatesList({
               </div>
             </div>
           </CardContent>
-          <CardFooter className="border-t bg-gray-50 px-4 py-2 flex items-center justify-between">
+          <CardFooter className="border-t border-border px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {template.category && (
                 <div className="flex items-center gap-1">
-                  <FileText className="h-4 w-4 text-gray-400" />
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   <span
                     className={`text-xs font-medium ${
                       template.category.name
                         .toLowerCase()
                         .includes(searchQuery.toLowerCase())
-                        ? "text-green-600"
-                        : "text-gray-500"
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-muted-foreground"
                     }`}
                     dangerouslySetInnerHTML={{
                       __html: highlightSearchTerm(
@@ -587,7 +587,7 @@ export function TemplatesList({
                 </div>
               )}
             </div>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
               {new Date(template.createdAt).toLocaleDateString()}
             </span>
           </CardFooter>

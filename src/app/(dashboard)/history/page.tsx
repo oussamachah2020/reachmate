@@ -56,10 +56,8 @@ export default function EmailHistoryInsightsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Email History & Insights
-          </h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold ">Email History & Insights</h1>
+          <p className=" mt-1">
             Track performance and discover patterns in your email communication
           </p>
         </div>
@@ -68,7 +66,7 @@ export default function EmailHistoryInsightsPage() {
             value={selectedTimeframe}
             onValueChange={setSelectedTimeframe}
           >
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -81,10 +79,8 @@ export default function EmailHistoryInsightsPage() {
         </div>
       </div>
 
-      {/* Quick Stats */}
       <QuickStats stats={quickStats} isLoading={isLoading} />
 
-      {/* Main Content Tabs */}
       <Tabs
         value={selectedTab}
         onValueChange={setSelectedTab}
