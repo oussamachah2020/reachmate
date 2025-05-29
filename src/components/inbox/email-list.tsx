@@ -207,9 +207,8 @@ export function EmailList({
   const unreadCount = emailList.filter((email) => !email.isRead).length;
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b border-gray-200 bg-gray-50/50 px-4">
+    <div className="flex h-full flex-col ">
+      <div className="flex h-14 items-center justify-between border-b  px-4">
         <div className="flex items-center space-x-3">
           <Checkbox
             defaultChecked={
@@ -219,7 +218,7 @@ export function EmailList({
             onCheckedChange={toggleAllEmails}
             className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
           />
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium ">
             {selectedEmails.length > 0 ? (
               <span className="text-green-600">
                 {selectedEmails.length} selected
@@ -229,10 +228,7 @@ export function EmailList({
             )}
           </span>
           {unreadCount > 0 && (
-            <Badge
-              variant="secondary"
-              className="bg-green-100 text-green-800 text-xs"
-            >
+            <Badge variant="secondary" className=" text-xs">
               {unreadCount} unread
             </Badge>
           )}
@@ -244,7 +240,7 @@ export function EmailList({
               variant="ghost"
               size="sm"
               onClick={handleArchiving}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              className="p-2  rounded-md transition-colors"
               title="Archive selected"
             >
               <Archive className="h-4 w-4" />
@@ -262,7 +258,7 @@ export function EmailList({
       {/* Email List */}
       <div className="flex-1 overflow-y-auto">
         {emailList.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-gray-500">
+          <div className="flex items-center justify-center h-64 ">
             <div className="text-center">
               <div className="text-4xl mb-2">📭</div>
               <p className="text-lg font-medium">No emails found</p>
@@ -274,15 +270,15 @@ export function EmailList({
             <div
               key={email.id}
               className={cn(
-                "group flex cursor-pointer border-b border-gray-100 px-4 py-3 transition-all duration-150 hover:bg-gray-50/80",
+                "group flex cursor-pointer border-b px-4 py-3 transition-all duration-150",
                 activeEmail === email.id
-                  ? "bg-green-50 border-l-4 border-l-green-500"
+                  ? "bg-green-50 dark:bg-green-900 border-l-4 border-l-green-500"
                   : "",
                 !email.isRead
-                  ? "bg-gradient-to-r from-green-50/30 to-transparent"
+                  ? "bg-gradient-to-r from-green-50/30 to-transparent dark:from-green-900/30"
                   : "",
                 selectedEmails.includes(email.id)
-                  ? "bg-blue-50 border-l-4 border-l-blue-500"
+                  ? "bg-blue-50 dark:bg-blue-900 border-l-4 border-l-blue-500"
                   : ""
               )}
               onClick={() => {
@@ -302,7 +298,7 @@ export function EmailList({
                 />
                 <button
                   className={cn(
-                    "text-gray-300 hover:text-amber-400 transition-colors",
+                    "text-gray-300 dark:text-gray-600 hover:text-amber-400 transition-colors",
                     starredEmails.has(email.id)
                       ? "text-amber-400"
                       : "opacity-0 group-hover:opacity-100"
@@ -325,7 +321,7 @@ export function EmailList({
 
               {/* Avatar */}
               <div className="mr-3 mt-1">
-                <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+                <Avatar className="h-10 w-10 ring-2 ring-white dark:ring-gray-800 shadow-sm">
                   <AvatarImage
                     src="/placeholder.svg"
                     alt={`${email.sender.firstName} ${email.sender.lastName}`}
@@ -346,13 +342,13 @@ export function EmailList({
                       className={cn(
                         "text-sm font-medium truncate",
                         !email.isRead
-                          ? "text-gray-900 font-semibold"
-                          : "text-gray-700"
+                          ? "text-gray-900 dark:text-white font-semibold"
+                          : "text-gray-700 dark:text-gray-300"
                       )}
                     >
                       {email.sender.firstName} {email.sender.lastName}
                     </span>
-                    <span className="text-xs text-gray-400 hidden sm:inline">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
                       {email.sender.email}
                     </span>
                     {!email.isRead && (
@@ -364,9 +360,9 @@ export function EmailList({
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                     {email.attachment && email.attachment.length > 0 && (
-                      <Paperclip className="h-3 w-3 text-gray-400" />
+                      <Paperclip className="h-3 w-3 text-gray-400 dark:text-gray-500" />
                     )}
-                    <span className="text-xs text-gray-400 font-medium">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
                       {formatDate(email.sentAt)}
                     </span>
                   </div>
@@ -377,15 +373,15 @@ export function EmailList({
                   className={cn(
                     "text-sm mb-2 truncate leading-tight",
                     !email.isRead
-                      ? "font-semibold text-gray-900"
-                      : "font-medium text-gray-700"
+                      ? "font-semibold text-gray-900 dark:text-white"
+                      : "font-medium text-gray-700 dark:text-gray-300"
                   )}
                 >
                   {email.template?.subject || "No Subject"}
                 </h3>
 
                 {/* Preview Text */}
-                <p className="text-xs text-gray-500 mb-2 leading-relaxed line-clamp-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 leading-relaxed line-clamp-2">
                   {email.template?.body
                     ? truncateHtml(email.template.body, 140)
                     : "No preview available"}
@@ -397,7 +393,7 @@ export function EmailList({
                     {email.category && (
                       <Badge
                         variant="secondary"
-                        className="text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                        className="text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
                         {email.category.name}
                       </Badge>
@@ -405,7 +401,7 @@ export function EmailList({
                     {email.tag && (
                       <Badge
                         variant="outline"
-                        className="text-xs border-green-200 text-green-600 bg-green-50"
+                        className="text-xs border-green-200 text-green-600 bg-green-50 dark:border-green-700 dark:text-green-400 dark:bg-green-900"
                       >
                         {email.tag.name}
                       </Badge>

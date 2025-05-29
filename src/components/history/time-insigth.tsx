@@ -16,7 +16,7 @@ interface TimeInsightsProps {
 export function TimeInsights({ insights, isLoading }: TimeInsightsProps) {
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle>Best Times to Send</CardTitle>
           <CardDescription>Loading timing insights...</CardDescription>
@@ -36,7 +36,7 @@ export function TimeInsights({ insights, isLoading }: TimeInsightsProps) {
   }
 
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardHeader>
         <CardTitle>Best Times to Send</CardTitle>
         <CardDescription>

@@ -37,7 +37,7 @@ const templates = [
 
 export function EmailTemplates() {
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Email Templates</CardTitle>
@@ -51,7 +51,7 @@ export function EmailTemplates() {
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {templates.map((template) => (
-            <Card key={template.id} className="cursor-pointer hover:bg-gray-50">
+            <Card key={template.id} className="cursor-pointer shadow-none">
               <CardContent className="p-4">
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                   <FileText className="h-5 w-5 text-primary" />

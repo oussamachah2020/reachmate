@@ -318,10 +318,10 @@ const EmailSendingDialog = () => {
           </Button>
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-4xl p-0 border-none shadow-2xl rounded-lg overflow-hidden">
-          <div className="bg-white flex flex-col">
+        <DialogContent className="sm:max-w-4xl p-0 border-none dark:shadow-white/30 rounded-lg overflow-hidden">
+          <div className=" flex flex-col">
             <DialogTitle>
-              <div className="px-4 py-3 border-b text-sm font-medium bg-gray-100">
+              <div className="px-4 py-3 border-b text-sm font-medium ">
                 New Message
               </div>
             </DialogTitle>
@@ -343,7 +343,7 @@ const EmailSendingDialog = () => {
                 <Input
                   id="subject"
                   placeholder="Subject"
-                  className="text-sm border-gray-200"
+                  className="text-sm "
                   {...register("subject", { required: "Subject is required" })}
                 />
                 {errors.subject && (
@@ -470,7 +470,7 @@ const EmailSendingDialog = () => {
                     onChange={(e) => handleFileUpload(e.target.files)}
                   />
                   <div className="h-5 bg-gray-400 w-[1px]" />
-                  <AttachmentsDialog 
+                  <AttachmentsDialog
                     selectedAttachments={attachments}
                     onAttachmentsChange={setAttachments}
                   />

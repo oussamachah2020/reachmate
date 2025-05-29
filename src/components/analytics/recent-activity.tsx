@@ -141,7 +141,7 @@ export function RecentActivity({
                   <Icon className="w-4 h-4 text-green-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium ">
                     {getActivityText(activity)}
                   </p>
                   {activity.templateSubject && (
@@ -150,7 +150,7 @@ export function RecentActivity({
                     </p>
                   )}
                   {activity.recipientEmail && (
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs  truncate">
                       To: {activity.recipientEmail}
                     </p>
                   )}

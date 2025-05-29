@@ -38,18 +38,18 @@ export function TemplatePerformance({
             {[...Array(5)].map((_, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg animate-pulse"
+                className="flex items-center justify-between p-4  rounded-lg animate-pulse"
               >
                 <div className="flex-1">
-                  <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 w-32  rounded mb-2"></div>
                   <div className="flex items-center space-x-4">
-                    <div className="h-3 w-16 bg-gray-200 rounded"></div>
-                    <div className="h-3 w-24 bg-gray-200 rounded"></div>
+                    <div className="h-3 w-16  rounded"></div>
+                    <div className="h-3 w-24  rounded"></div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="h-6 w-12 bg-gray-200 rounded mb-1"></div>
-                  <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                  <div className="h-6 w-12  rounded mb-1"></div>
+                  <div className="h-3 w-16  rounded"></div>
                 </div>
               </div>
             ))}
@@ -69,7 +69,7 @@ export function TemplatePerformance({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-64 text-gray-500">
+          <div className="flex items-center justify-center h-64 ">
             <div className="text-center">
               <div className="text-4xl mb-2">📄</div>
               <p className="text-lg font-medium">No templates found</p>
@@ -96,10 +96,10 @@ export function TemplatePerformance({
           {data.map((template, index) => (
             <div
               key={template.id}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              className="flex items-center justify-between p-4 border rounded-lg "
             >
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900 truncate">
+                <h4 className="font-medium truncate">
                   {template.subject || "Untitled Template"}
                 </h4>
                 <div className="flex items-center space-x-4 mt-1">
@@ -108,9 +108,7 @@ export function TemplatePerformance({
                       {template.category}
                     </Badge>
                   )}
-                  <span className="text-sm text-gray-500">
-                    Used {template.usage} times
-                  </span>
+                  <span className="text-sm ">Used {template.usage} times</span>
                 </div>
               </div>
               <div className="text-right ml-4">

@@ -31,12 +31,15 @@ const scheduledEmails = [
 
 export function UpcomingScheduled() {
   return (
-    <Card className="h-[20.8em]">
+    <Card className="h-[20.8em] shadow-none relative overflow-hidden">
       <CardHeader>
         <CardTitle>Scheduled Emails</CardTitle>
         <CardDescription>Upcoming scheduled emails</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative">
+        <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-md bg-white/60">
+          <span className="text-lg font-medium text-gray-700">Coming Soon</span>
+        </div>
         <div className="space-y-4">
           {scheduledEmails.map((email) => (
             <div key={email.id} className="flex items-start space-x-3">

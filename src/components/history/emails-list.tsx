@@ -57,7 +57,7 @@ export function EmailHistoryList({ emails, isLoading }: EmailHistoryListProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "replied":
-        return "text-green-600 bg-green-100";
+        return " bg-green-100";
       case "opened":
         return "text-blue-600 bg-blue-100";
       case "delivered":
@@ -102,14 +102,14 @@ export function EmailHistoryList({ emails, isLoading }: EmailHistoryListProps) {
     return (
       <div className="space-y-4">
         <div className="flex items-center space-x-4">
-          <div className="h-10 w-64 bg-gray-200 rounded animate-pulse"></div>
-          <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-10 w-64 bg-gray-700 rounded animate-pulse"></div>
+          <div className="h-10 w-32 bg-gray-700 rounded animate-pulse"></div>
         </div>
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="h-24 bg-gray-200 rounded animate-pulse"
+              className="h-24 bg-gray-700 rounded animate-pulse"
             ></div>
           ))}
         </div>
@@ -122,16 +122,16 @@ export function EmailHistoryList({ emails, isLoading }: EmailHistoryListProps) {
       {/* Search and Filter */}
       <div className="flex items-center space-x-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2  h-4 w-4" />
           <Input
             placeholder="Search emails..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 shadow-none"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32 shadow-none">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
@@ -148,21 +148,22 @@ export function EmailHistoryList({ emails, isLoading }: EmailHistoryListProps) {
       {/* Email List */}
       <div className="space-y-2">
         {filteredEmails.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Mail className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <div className="text-center py-8">
+            <Mail className="h-12 w-12 mx-auto mb-4 " />
             <p className="text-lg font-medium">No emails found</p>
             <p className="text-sm">Try adjusting your search or filters</p>
           </div>
         ) : (
           filteredEmails.map((email) => (
-            <Card key={email.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={email.id}
+              className="shadow-none hover:shadow-md transition-shadow"
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-gray-900">
-                        {email.subject}
-                      </h3>
+                      <h3 className="font-semibold ">{email.subject}</h3>
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(email.status)}`}
                       >
@@ -170,7 +171,7 @@ export function EmailHistoryList({ emails, isLoading }: EmailHistoryListProps) {
                         <span className="ml-1 capitalize">{email.status}</span>
                       </span>
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                    <div className="flex items-center space-x-4 text-sm  mt-2">
                       <span>
                         To: {email.recipientName || email.recipientEmail}
                       </span>

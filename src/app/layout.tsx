@@ -25,9 +25,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} antialiased`}>
-        <ThemeProvider defaultTheme="light" storageKey="email-app-theme">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <Toaster position="top-right" />
           {children}
         </ThemeProvider>

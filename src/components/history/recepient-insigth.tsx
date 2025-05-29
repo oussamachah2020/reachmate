@@ -24,7 +24,7 @@ export function RecipientsInsights({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle>Top Recipients</CardTitle>
           <CardDescription>Loading recipient insights...</CardDescription>
@@ -44,7 +44,7 @@ export function RecipientsInsights({
   }
 
   return (
-    <Card>
+    <Card className="shadow-none">
       <CardHeader>
         <CardTitle>Top Recipients</CardTitle>
         <CardDescription>
@@ -54,8 +54,8 @@ export function RecipientsInsights({
       <CardContent>
         <div className="space-y-4">
           {recipients.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Mail className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <div className="text-center py-8 ">
+              <Mail className="h-12 w-12 mx-auto mb-4 " />
               <p className="text-lg font-medium">No recipient data yet</p>
               <p className="text-sm">Start sending emails to see insights</p>
             </div>
@@ -78,16 +78,16 @@ export function RecipientsInsights({
                       </span>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">
+                      <h3 className="font-semibold ">
                         {recipient.name || recipient.email}
                       </h3>
-                      <p className="text-sm text-gray-600">{recipient.email}</p>
+                      <p className="text-sm ">{recipient.email}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
                     <div>
-                      <span className="text-gray-500">Emails Sent:</span>
+                      <span className="">Emails Sent:</span>
                       <span className="ml-2 font-semibold">
                         {recipient.totalEmails}
                       </span>
@@ -99,13 +99,13 @@ export function RecipientsInsights({
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Reply Rate:</span>
+                      <span className="">Reply Rate:</span>
                       <span className="ml-2 font-semibold text-blue-600">
                         {recipient.replyRate}%
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Avg Response:</span>
+                      <span className="">Avg Response:</span>
                       <span className="ml-2 font-semibold">
                         {recipient.averageResponseTime?.toFixed(1)}h
                       </span>
@@ -114,7 +114,7 @@ export function RecipientsInsights({
 
                   {recipient.bestPerformingTemplate && (
                     <div className="mt-2 text-sm">
-                      <span className="text-gray-500">Best Template:</span>
+                      <span className="">Best Template:</span>
                       <span className="ml-2 text-purple-600 font-medium">
                         {recipient.bestPerformingTemplate}
                       </span>

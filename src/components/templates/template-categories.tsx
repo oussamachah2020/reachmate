@@ -190,7 +190,7 @@ export function TemplateCategories() {
   return (
     <div className="space-y-6">
       {/* Categories */}
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border ">
         <div className="border-b p-3">
           <h3 className="font-medium">Categories</h3>
         </div>
@@ -212,10 +212,12 @@ export function TemplateCategories() {
                             : ""
                         )}
                       >
-                        <span>{category.name}</span>
-                        <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                          {category.count}
-                        </span>
+                        <span className="">{category.name}</span>
+                        {category.id === "all" ? (
+                          <span className="ml-2 rounded-full bg-gray-100 text-primary px-2 py-0.5 text-xs ">
+                            {category.count}
+                          </span>
+                        ) : null}
                       </Button>
                     </div>
                   </ContextMenuTrigger>
@@ -241,7 +243,7 @@ export function TemplateCategories() {
       </div>
 
       {/* Tags */}
-      <div className="rounded-lg border bg-white">
+      <div className="rounded-lg border ">
         <div className="border-b p-3">
           <h3 className="font-medium">Popular Tags</h3>
         </div>
@@ -253,10 +255,10 @@ export function TemplateCategories() {
               tags.map((tag) => (
                 <div
                   key={tag.id}
-                  className="flex items-center rounded-full border bg-gray-50 px-3 py-1 text-xs"
+                  className="flex items-center rounded-full border  px-3 py-1 text-xs"
                 >
                   {tag.name}
-                  <span className="ml-1 text-gray-500">({tag.count})</span>
+                  {/* <span className="ml-1 text-gray-500">({tag.count})</span> */}
                   <Button
                     onClick={() => handleDeleteTag(tag.id)}
                     variant="ghost"
