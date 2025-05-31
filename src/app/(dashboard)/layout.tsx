@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/zustand/auth.store";
 import Cookies from "js-cookie";
 import { Session } from "@supabase/supabase-js";
-import { ThemeProvider } from "@/components/theme-provider";
 
 interface DashboardLayoutProps {
   children: ReactNode;

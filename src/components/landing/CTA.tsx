@@ -73,9 +73,9 @@ export function CTA() {
               <Link href="/sign-up">
                 <Button
                   size="lg"
-                  className="bg-white text-primary hover:bg-white/20 transition-all"
+                  className="bg-white cursor-pointer text-primary hover:bg-white/20 transition-all"
                 >
-                  <span>Start Free Trial</span>
+                  <span className="text-white">Start Free Trial</span>
                   <motion.span
                     className="ml-1"
                     animate={{
