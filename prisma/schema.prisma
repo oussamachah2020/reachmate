@@ -23,6 +23,7 @@ model Sender {
   Category  Category[]
   Tag       Tag[]
   Attachment Attachment[]
+  ScheduledEmail ScheduledEmail[]
 
   @@map("sender")
 }
@@ -63,6 +64,22 @@ model EmailSent {
 
   @@map("email_sent")
 }
+
+model ScheduledEmail {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  senderId     String    @db.Uuid
+  sender       Sender    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  toEmail      String
+  subject      String
+  body         String
+  scheduledAt  DateTime
+  priority     Priority
+  sent         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@map("scheduled_email") // Optional: if your database table is named exactly like this
+}
+
 
 model Attachment {
   id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -140,4 +157,10 @@ model Tag {
 enum Gender {
   MALE
   FEMALE
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
 }

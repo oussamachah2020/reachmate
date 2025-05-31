@@ -37,9 +37,9 @@ export function UpcomingScheduled() {
         <CardDescription>Upcoming scheduled emails</CardDescription>
       </CardHeader>
       <CardContent className="relative">
-        <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-md bg-white/60">
+        {/* <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-md bg-white/60">
           <span className="text-lg font-medium text-gray-700">Coming Soon</span>
-        </div>
+        </div> */}
         <div className="space-y-4">
           {scheduledEmails.map((email) => (
             <div key={email.id} className="flex items-start space-x-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -46,26 +46,42 @@ import {
   Zap,
   Plus,
   X,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DateTimePicker } from "@/components/ui/date-time-picker";
+import { useAuthStore } from "@/zustand/auth.store";
+import { Priority } from "@prisma/client";
 
-const scheduleFormSchema = z.object({
-  recipients: z
-    .array(z.string().email())
-    .min(1, "At least one recipient is required"),
-  subject: z
-    .string()
-    .min(1, "Subject is required")
-    .max(200, "Subject must be less than 200 characters"),
-  body: z.string().min(1, "Email body is required"),
-  scheduleType: z.enum(["datetime", "quick"], {
-    required_error: "Please select a schedule type",
-  }),
-  quickOption: z.string().optional(),
-  scheduleAt: z.string().min(1, "Schedule time is required"),
-  priority: z.enum(["low", "normal", "high"]).default("normal"),
-});
+const scheduleFormSchema = z
+  .object({
+    recipients: z
+      .array(z.string().email("Invalid email address"))
+      .min(1, "At least one recipient is required"),
+    subject: z
+      .string()
+      .min(1, "Subject is required")
+      .max(200, "Subject must be less than 200 characters"),
+    body: z.string().min(1, "Email body is required"),
+    scheduleType: z.enum(["datetime", "quick"], {
+      required_error: "Please select a schedule type",
+    }),
+    quickOption: z.string().optional(),
+    scheduleAt: z.string().min(1, "Schedule time is required"),
+    priority: z.enum([Priority.HIGH, Priority.LOW, Priority.NORMAL]),
+  })
+  .refine(
+    (data) => {
+      // Validate that schedule time is in the future
+      const scheduleDate = new Date(data.scheduleAt);
+      const now = new Date();
+      return scheduleDate > now;
+    },
+    {
+      message: "Schedule time must be in the future",
+      path: ["scheduleAt"],
+    }
+  );
 
 type ScheduleFormValues = z.infer<typeof scheduleFormSchema>;
 
@@ -76,13 +92,43 @@ const quickScheduleOptions = [
   { value: "nextweek", label: "Next Monday 9 AM" },
 ];
 
+// Simple DateTimePicker component since the original might not be available
+function DateTimePicker({
+  control,
+  name,
+  disabled,
+}: {
+  control: any;
+  name: string;
+  disabled?: boolean;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormControl>
+          <Input
+            type="datetime-local"
+            disabled={disabled}
+            {...field}
+            min={new Date().toISOString().slice(0, 16)}
+          />
+        </FormControl>
+      )}
+    />
+  );
+}
+
 export default function ScheduleEmailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recipientInput, setRecipientInput] = useState("");
+  const [isValidEmail, setIsValidEmail] = useState(false);
   const router = useRouter();
+  const { user } = useAuthStore();
 
   const form = useForm<ScheduleFormValues>({
-    // resolver: zodResolver(scheduleFormSchema),
+    resolver: zodResolver(scheduleFormSchema),
     defaultValues: {
       recipients: [],
       subject: "",
@@ -90,22 +136,59 @@ export default function ScheduleEmailPage() {
       scheduleType: "datetime",
       quickOption: "",
       scheduleAt: "",
-      priority: "normal",
+      priority: Priority.NORMAL,
     },
+    mode: "onChange", // Enable real-time validation
   });
 
   const watchedScheduleType = form.watch("scheduleType");
   const watchedRecipients = form.watch("recipients");
   const watchedQuickOption = form.watch("quickOption");
+  const watchedBody = form.watch("body");
+  const watchedSubject = form.watch("subject");
+  const watchedPriority = form.watch("priority");
+  const watchedScheduleAt = form.watch("scheduleAt");
+
+  // Validate email input in real-time
+  useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    setIsValidEmail(emailRegex.test(recipientInput));
+  }, [recipientInput]);
+
+  // Auto-focus on first input
+  useEffect(() => {
+    const firstInput = document.querySelector(
+      'input[placeholder="Enter email address"]'
+    ) as HTMLInputElement;
+    if (firstInput) {
+      firstInput.focus();
+    }
+  }, []);
 
   const addRecipient = () => {
-    if (recipientInput && recipientInput.includes("@")) {
-      const currentRecipients = form.getValues("recipients");
-      if (!currentRecipients.includes(recipientInput)) {
-        form.setValue("recipients", [...currentRecipients, recipientInput]);
-        setRecipientInput("");
-      }
+    const email = recipientInput.trim();
+    if (!email) return;
+
+    if (!isValidEmail) {
+      toast.error("Invalid email address", {
+        description: "Please enter a valid email address.",
+      });
+      return;
     }
+
+    const currentRecipients = form.getValues("recipients");
+    if (currentRecipients.includes(email)) {
+      toast.error("Email already added", {
+        description: "This email address is already in the recipients list.",
+      });
+      return;
+    }
+
+    form.setValue("recipients", [...currentRecipients, email]);
+    setRecipientInput("");
+    toast.success("Recipient added", {
+      description: `${email} has been added to the recipients list.`,
+    });
   };
 
   const removeRecipient = (email: string) => {
@@ -114,6 +197,9 @@ export default function ScheduleEmailPage() {
       "recipients",
       currentRecipients.filter((r) => r !== email)
     );
+    toast.success("Recipient removed", {
+      description: `${email} has been removed from the recipients list.`,
+    });
   };
 
   const handleQuickSchedule = (option: string) => {
@@ -138,44 +224,88 @@ export default function ScheduleEmailPage() {
         scheduleDate.setDate(now.getDate() + daysUntilMonday);
         scheduleDate.setHours(9, 0, 0, 0);
         break;
+      default:
+        return;
     }
 
     const isoString = scheduleDate.toISOString().slice(0, 16);
     form.setValue("scheduleAt", isoString);
     form.setValue("quickOption", option);
+
+    // Clear any previous validation errors
+    form.clearErrors("scheduleAt");
+
+    toast.success("Schedule time set", {
+      description: `Email will be sent ${scheduleDate.toLocaleString()}`,
+    });
   };
 
   const onSubmit = async (data: ScheduleFormValues) => {
     setIsSubmitting(true);
 
     try {
+      // Additional client-side validation
+      const scheduleDate = new Date(data.scheduleAt);
+      const now = new Date();
+
+      if (scheduleDate <= now) {
+        toast.error("Invalid schedule time", {
+          description: "Please select a future date and time.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const response = await fetch("/api/schedule-email", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, userId: user?.id }),
         headers: {
           "Content-Type": "application/json",
         },
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        toast("Email scheduled successfully", {
-          description: `Your email will be sent to ${data.recipients.length} recipient(s) at the scheduled time.`,
+        toast.success("Email scheduled successfully! 🎉", {
+          description: `Your email will be sent to ${data.recipients.length} recipient(s) on ${scheduleDate.toLocaleString()}.`,
+          duration: 5000,
         });
-        router.push("/scheduled");
+
+        // Reset form
+        form.reset();
+        setRecipientInput("");
       } else {
-        throw new Error("Failed to schedule email");
+        throw new Error(result.error || "Failed to schedule email");
       }
     } catch (error) {
-      toast("Error", {
-        description: "Failed to schedule email. Please try again.",
+      console.error("Schedule email error:", error);
+      toast.error("Failed to schedule email", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred. Please try again.",
+        duration: 5000,
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Helper function to check if form is valid for submission
+  const isFormValid = () => {
+    return (
+      watchedRecipients.length > 0 &&
+      watchedSubject.trim() !== "" &&
+      watchedBody.trim() !== "" &&
+      watchedScheduleAt !== "" &&
+      (watchedScheduleType === "datetime" ||
+        (watchedScheduleType === "quick" && watchedQuickOption !== ""))
+    );
+  };
+
   return (
-    <div className="container mx-auto  py-8">
+    <div className="container mx-auto py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Send className="h-8 w-8 text-primary" />
@@ -189,7 +319,7 @@ export default function ScheduleEmailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Form */}
         <div className="lg:col-span-2">
-          <Card>
+          <Card className="shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
@@ -214,43 +344,79 @@ export default function ScheduleEmailPage() {
                         <FormLabel className="flex items-center gap-2">
                           <User className="h-4 w-4" />
                           Recipients
+                          {watchedRecipients.length > 0 && (
+                            <Badge variant="secondary" className="ml-2">
+                              {watchedRecipients.length}
+                            </Badge>
+                          )}
                         </FormLabel>
                         <div className="space-y-3">
                           <div className="flex gap-2">
-                            <Input
-                              placeholder="Enter email address"
-                              value={recipientInput}
-                              onChange={(e) =>
-                                setRecipientInput(e.target.value)
-                              }
-                              onKeyPress={(e) =>
-                                e.key === "Enter" &&
-                                (e.preventDefault(), addRecipient())
-                              }
-                            />
+                            <div className="relative flex-1">
+                              <Input
+                                placeholder="Enter email address"
+                                value={recipientInput}
+                                onChange={(e) =>
+                                  setRecipientInput(e.target.value)
+                                }
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addRecipient();
+                                  }
+                                }}
+                                className={`${
+                                  recipientInput && !isValidEmail
+                                    ? "border-red-500 focus:border-red-500"
+                                    : recipientInput && isValidEmail
+                                      ? "border-green-500 focus:border-green-500"
+                                      : ""
+                                }`}
+                              />
+                              {recipientInput && (
+                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                  {isValidEmail ? (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <AlertCircle className="h-4 w-4 text-red-500" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
                             <Button
                               type="button"
                               onClick={addRecipient}
                               size="icon"
                               variant="outline"
+                              disabled={!isValidEmail || !recipientInput.trim()}
+                              className={
+                                isValidEmail && recipientInput.trim()
+                                  ? "border-green-500 text-green-500 hover:bg-green-50"
+                                  : ""
+                              }
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
+                          {!isValidEmail && recipientInput && (
+                            <p className="text-sm text-red-500">
+                              Please enter a valid email address
+                            </p>
+                          )}
                           {watchedRecipients.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {watchedRecipients.map((email) => (
                                 <Badge
                                   key={email}
                                   variant="secondary"
-                                  className="flex items-center gap-1"
+                                  className="flex items-center gap-1 pr-1"
                                 >
                                   {email}
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                    className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
                                     onClick={() => removeRecipient(email)}
                                   >
                                     <X className="h-3 w-3" />
@@ -302,19 +468,19 @@ export default function ScheduleEmailPage() {
                               <SelectValue placeholder="Select priority" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="low">
+                              <SelectItem value={Priority.LOW}>
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full bg-gray-400" />
                                   Low Priority
                                 </div>
                               </SelectItem>
-                              <SelectItem value="normal">
+                              <SelectItem value={Priority.NORMAL}>
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full bg-blue-400" />
                                   Normal Priority
                                 </div>
                               </SelectItem>
-                              <SelectItem value="high">
+                              <SelectItem value={Priority.HIGH}>
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full bg-red-400" />
                                   High Priority
@@ -337,8 +503,8 @@ export default function ScheduleEmailPage() {
                         <FormLabel>Message</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Write your email message here..."
-                            className="min-h-[200px] resize-none"
+                            placeholder="Enter your email message..."
+                            className="min-h-[200px]"
                             {...field}
                           />
                         </FormControl>
@@ -352,18 +518,29 @@ export default function ScheduleEmailPage() {
 
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !isFormValid()}
                     className="w-full"
+                    size="lg"
                   >
                     {isSubmitting ? (
                       <>
                         <Timer className="mr-2 h-4 w-4 animate-spin" />
                         Scheduling...
                       </>
+                    ) : !isFormValid() ? (
+                      <>
+                        <AlertCircle className="mr-2 h-4 w-4" />
+                        Complete Form to Schedule
+                      </>
                     ) : (
                       <>
                         <Send className="mr-2 h-4 w-4" />
                         Schedule Email
+                        {watchedScheduleAt && (
+                          <Badge variant="secondary" className="ml-2">
+                            {new Date(watchedScheduleAt).toLocaleDateString()}
+                          </Badge>
+                        )}
                       </>
                     )}
                   </Button>
@@ -375,7 +552,7 @@ export default function ScheduleEmailPage() {
 
         {/* Schedule Settings Sidebar */}
         <div className="space-y-6">
-          <Card>
+          <Card className="shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
@@ -502,35 +679,128 @@ export default function ScheduleEmailPage() {
           </Card>
 
           {/* Preview Card */}
-          <Card>
+          <Card className="shadow-none">
             <CardHeader>
-              <CardTitle className="text-sm">Email Preview</CardTitle>
+              <CardTitle className="text-sm flex items-center justify-between">
+                Email Preview
+                {isFormValid() ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-orange-500" />
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="text-xs text-muted-foreground">
                 <strong>To:</strong>{" "}
-                {watchedRecipients.length > 0
-                  ? `${watchedRecipients.length} recipient(s)`
-                  : "No recipients"}
+                <span
+                  className={
+                    watchedRecipients.length > 0
+                      ? "text-green-600"
+                      : "text-red-500"
+                  }
+                >
+                  {watchedRecipients.length > 0
+                    ? `${watchedRecipients.length} recipient(s)`
+                    : "No recipients"}
+                </span>
               </div>
               <div className="text-xs text-muted-foreground">
                 <strong>Subject:</strong>{" "}
-                {form.watch("subject") || "No subject"}
+                <span
+                  className={watchedSubject ? "text-green-600" : "text-red-500"}
+                >
+                  {watchedSubject || "No subject"}
+                </span>
+                {watchedSubject && (
+                  <span className="ml-2 text-xs text-gray-400">
+                    ({watchedSubject.length}/200)
+                  </span>
+                )}
               </div>
               <div className="text-xs text-muted-foreground">
                 <strong>Priority:</strong>
-                <Badge variant="outline" className="ml-1 text-xs">
-                  {form.watch("priority")}
+                <Badge
+                  variant="outline"
+                  className={`ml-1 text-xs ${
+                    watchedPriority === Priority.HIGH
+                      ? "border-red-500 text-red-500"
+                      : watchedPriority === Priority.LOW
+                        ? "border-gray-500 text-gray-500"
+                        : "border-blue-500 text-blue-500"
+                  }`}
+                >
+                  {watchedPriority}
                 </Badge>
               </div>
               <Separator />
               <div className="text-xs text-muted-foreground">
                 <strong>Scheduled for:</strong>
                 <br />
-                {form.watch("scheduleAt")
-                  ? new Date(form.watch("scheduleAt")).toLocaleString()
-                  : "Not scheduled"}
+                <span
+                  className={
+                    watchedScheduleAt ? "text-green-600" : "text-red-500"
+                  }
+                >
+                  {watchedScheduleAt
+                    ? new Date(watchedScheduleAt).toLocaleString()
+                    : "Not scheduled"}
+                </span>
+                {watchedScheduleAt && (
+                  <div className="mt-1 text-xs text-gray-400">
+                    {(() => {
+                      const scheduleDate = new Date(watchedScheduleAt);
+                      const now = new Date();
+                      const timeDiff = scheduleDate.getTime() - now.getTime();
+                      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                      const hours = Math.floor(
+                        (timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+                      );
+                      const minutes = Math.floor(
+                        (timeDiff % (1000 * 60 * 60)) / (1000 * 60)
+                      );
+
+                      if (timeDiff <= 0) return "⚠️ Past time";
+                      if (days > 0)
+                        return `in ${days} day(s) and ${hours} hour(s)`;
+                      if (hours > 0)
+                        return `in ${hours} hour(s) and ${minutes} minute(s)`;
+                      return `in ${minutes} minute(s)`;
+                    })()}
+                  </div>
+                )}
               </div>
+              {watchedBody && (
+                <>
+                  <Separator />
+                  <div className="text-xs text-muted-foreground">
+                    <strong>Message Preview:</strong>
+                    <div className="mt-1 p-2 bg-muted rounded text-xs max-h-20 overflow-y-auto">
+                      {watchedBody.slice(0, 150)}
+                      {watchedBody.length > 150 && "..."}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {watchedBody.length} characters
+                    </div>
+                  </div>
+                </>
+              )}
+              {!isFormValid() && (
+                <>
+                  <Separator />
+                  <div className="text-xs text-orange-600">
+                    <strong>Missing:</strong>
+                    <ul className="mt-1 space-y-1">
+                      {watchedRecipients.length === 0 && <li>• Recipients</li>}
+                      {!watchedSubject && <li>• Subject</li>}
+                      {!watchedBody && <li>• Message body</li>}
+                      {!watchedScheduleAt && <li>• Schedule time</li>}
+                      {watchedScheduleType === "quick" &&
+                        !watchedQuickOption && <li>• Quick schedule option</li>}
+                    </ul>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
