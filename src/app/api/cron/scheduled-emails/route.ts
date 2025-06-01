@@ -7,13 +7,9 @@ import { DateTime } from "luxon";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role key
+  process.env.SUPABASE_ANON_TOKEN!, // Use service role key
   { db: { schema: "public" } }
 );
-
-export const config = {
-  schedule: "*/5 * * * *", // Every 5 minutes
-};
 
 export async function POST(request: Request) {
   const startTime = Date.now();
