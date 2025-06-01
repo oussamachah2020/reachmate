@@ -7,28 +7,39 @@ import { DateTime } from "luxon";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_TOKEN!, // Use service role key
+  process.env.SUPABASE_ANON_TOKEN!, // Use service role key for admin operations
   { db: { schema: "public" } }
 );
 
-export async function POST(request: Request) {
+export async function POST() {
   const startTime = Date.now();
   console.log("Cron job triggered at:", DateTime.now().toUTC().toISO());
-
-  // Vercel cron jobs don't support custom headers, so skip API key check
-  // Consider securing via Vercel-specific measures (e.g., environment checks)
 
   const now = DateTime.now().toUTC().toISO();
   console.log("Fetching emails scheduled before:", now);
 
   try {
+    // Fetch scheduled emails with necessary relationship data
     const { data: emails, error } = await supabase
-      .from("scheduled_email") // Adjust to "scheduled_email" if needed
-      .select("id, toEmail, subject, body, priority, scheduledAt")
+      .from("scheduled_email")
+      .select(
+        `
+        id, 
+        toEmail, 
+        subject, 
+        body, 
+        priority, 
+        scheduledAt,
+        senderId,
+        templateId,
+        categoryId,
+        tagId
+      `
+      )
       .eq("sent", false)
       .lte("scheduledAt", now)
-      .order("scheduledAt", { ascending: true }) // Process older emails first
-      .limit(100); // Prevent overload
+      .order("scheduledAt", { ascending: true })
+      .limit(100);
 
     if (error) {
       console.error("Error fetching emails:", error);
@@ -52,8 +63,10 @@ export async function POST(request: Request) {
         console.log(
           `Sending email to ${email.toEmail} with subject: ${email.subject}`
         );
+
+        // Send email via Resend
         const response = await resend.emails.send({
-          from: "ReachMate <delivered@resend.dev>", // Use verified domain in production
+          from: "ReachMate <delivered@resend.dev>",
           to: email.toEmail,
           subject: email.subject,
           html: email.body,
@@ -66,8 +79,56 @@ export async function POST(request: Request) {
                   : "5",
           },
         });
+
         console.log(`Email sent to ${email.toEmail}:`, response);
 
+        // Get or create receiver
+        let receiverId: string;
+        const { data: existingReceiver } = await supabase
+          .from("receiver")
+          .select("id")
+          .eq("email", email.toEmail)
+          .single();
+
+        if (existingReceiver) {
+          receiverId = existingReceiver.id;
+        } else {
+          // Create new receiver if doesn't exist
+          const { data: newReceiver, error: receiverError } = await supabase
+            .from("receiver")
+            .insert({ email: email.toEmail })
+            .select("id")
+            .single();
+
+          if (receiverError || !newReceiver) {
+            throw new Error(
+              `Failed to create receiver: ${receiverError?.message}`
+            );
+          }
+          receiverId = newReceiver.id;
+        }
+
+        // Insert into email_sent table
+        const { error: insertError } = await supabase
+          .from("email_sent")
+          .insert({
+            templateId: email.templateId,
+            senderId: email.senderId,
+            receiverId: receiverId,
+            categoryId: email.categoryId || null,
+            tagId: email.tagId || null,
+            sentAt: DateTime.now().toUTC().toISO(),
+            // isRead, archived, starred will use their default values (false)
+          });
+
+        if (insertError) {
+          console.error(`Failed to insert email_sent record:`, insertError);
+          throw new Error(
+            `Failed to insert email_sent: ${insertError.message}`
+          );
+        }
+
+        // Mark scheduled email as sent
         const { error: updateError } = await supabase
           .from("scheduled_email")
           .update({ sent: true, sentAt: DateTime.now().toUTC().toISO() })
@@ -80,21 +141,15 @@ export async function POST(request: Request) {
           );
           failedEmails.push({ id: email.id, error: updateError.message });
         } else {
-          console.log(`Marked email ${email.id} as sent`);
+          console.log(`Successfully processed email ${email.id}`);
           processedEmails.push(email.id);
         }
       } catch (err) {
-        console.error(`Failed to send email to ${email.toEmail}:`, err);
-        // const { error: logError } = await supabase.from("email_logs").insert({
-        //   email_id: email.id,
-        //   toEmail: email.toEmail,
-        //   error: err instanceof Error ? err.message : "Unknown error",
-        //   created_at: DateTime.now().toUTC().toISO(),
-        // });
-        // if (logError) {
-        //   console.error("Failed to log email error:", logError);
-        // }
-        // failedEmails.push({ id: email.id, error: err });
+        console.error(`Failed to process email to ${email.toEmail}:`, err);
+        failedEmails.push({
+          id: email.id,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
       }
     }
 
