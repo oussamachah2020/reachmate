@@ -79,11 +79,8 @@ const EmailSendingDialog = () => {
     setValue,
     reset,
     formState: { errors },
-    watch,
   } = useForm<FormValues>();
 
-  const watchedTo = watch("to");
-  const watchedCc = watch("cc");
 
   useEffect(() => {
     if (toEmail) {

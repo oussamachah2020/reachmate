@@ -52,6 +52,9 @@ import {
 import { toast } from "sonner";
 import { useAuthStore } from "@/zustand/auth.store";
 import { Priority } from "@prisma/client";
+import { DateTimePicker } from "@/components/ui/date-time-picker"; // Import the new DateTimePicker
+import RichTextEditor from "@/components/ui/rich-text-editor";
+import { TemplatePickerDialog } from "@/components/inbox/template-picker-dialog";
 
 const scheduleFormSchema = z
   .object({
@@ -92,40 +95,16 @@ const quickScheduleOptions = [
   { value: "nextweek", label: "Next Monday 9 AM" },
 ];
 
-// Simple DateTimePicker component since the original might not be available
-function DateTimePicker({
-  control,
-  name,
-  disabled,
-}: {
-  control: any;
-  name: string;
-  disabled?: boolean;
-}) {
-  return (
-    <FormField
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <FormControl>
-          <Input
-            type="datetime-local"
-            disabled={disabled}
-            {...field}
-            min={new Date().toISOString().slice(0, 16)}
-          />
-        </FormControl>
-      )}
-    />
-  );
-}
-
 export default function ScheduleEmailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recipientInput, setRecipientInput] = useState("");
   const [isValidEmail, setIsValidEmail] = useState(false);
-  const router = useRouter();
+  const [content, setContent] = useState("");
   const { user } = useAuthStore();
+  const [selectedTemplate, setSelectedTemplate] = useState({
+    id: "",
+    content: "",
+  });
 
   const form = useForm<ScheduleFormValues>({
     resolver: zodResolver(scheduleFormSchema),
@@ -258,7 +237,7 @@ export default function ScheduleEmailPage() {
 
       const response = await fetch("/api/schedule-email", {
         method: "POST",
-        body: JSON.stringify({ ...data, userId: user?.id }),
+        body: JSON.stringify({ ...data, body: content, userId: user?.id }),
         headers: {
           "Content-Type": "application/json",
         },
@@ -303,6 +282,12 @@ export default function ScheduleEmailPage() {
         (watchedScheduleType === "quick" && watchedQuickOption !== ""))
     );
   };
+
+  useEffect(() => {
+    if (selectedTemplate) {
+      form.setValue("body", selectedTemplate.content);
+    }
+  }, [selectedTemplate]);
 
   return (
     <div className="container mx-auto py-8">
@@ -502,24 +487,32 @@ export default function ScheduleEmailPage() {
                       <FormItem>
                         <FormLabel>Message</FormLabel>
                         <FormControl>
-                          <Textarea
-                            placeholder="Enter your email message..."
-                            className="min-h-[200px]"
-                            {...field}
+                          <RichTextEditor
+                            value={field.value}
+                            htmlContent={selectedTemplate.content}
+                            onChange={field.onChange}
                           />
                         </FormControl>
                         <FormDescription>
-                          {field.value.length} characters
+                          {content.length} characters
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
+                  <TemplatePickerDialog
+                    onSelect={(template) => {
+                      setSelectedTemplate({
+                        id: template.id,
+                        content: template.content,
+                      });
+                      setContent(template.content);
+                    }}
+                  />
                   <Button
                     type="submit"
                     disabled={isSubmitting || !isFormValid()}
-                    className="w-full"
+                    className="w-full text-white"
                     size="lg"
                   >
                     {isSubmitting ? (

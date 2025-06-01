@@ -196,7 +196,7 @@ const RichTextEditor = ({
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={`p-1 rounded ${
-              editor.isActive("bold") ? "bg-gray-200" : ""
+              editor.isActive("bold") ? "bg-gray-200 dark:bg-gray-100/50" : ""
             }`}
           >
             <BoldIcon size={16} />
