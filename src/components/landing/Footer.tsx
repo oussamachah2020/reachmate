@@ -146,11 +146,7 @@ export function Footer() {
           <p className="text-sm text-muted-foreground">
             © {currentYear} ReachMate. All rights reserved.
           </p>
-          <div className="flex items-center space-x-4">
-            <span className="text-xs text-muted-foreground">
-              Made with 💚 in California
-            </span>
-          </div>
+
         </motion.div>
       </div>
     </footer>

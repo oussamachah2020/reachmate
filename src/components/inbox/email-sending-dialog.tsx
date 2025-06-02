@@ -10,7 +10,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Paperclip, FileText, Send, PlusIcon, XIcon } from "lucide-react";
+import {
+  Paperclip,
+  FileText,
+  Send,
+  PlusIcon,
+  XIcon,
+  Users,
+  User,
+} from "lucide-react";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import { TemplatePickerDialog } from "./template-picker-dialog";
 import { supabase } from "@/lib/supabase/client";
@@ -42,6 +50,7 @@ type Attachment = {
 
 type FormValues = {
   to: string;
+  toMultiple?: string;
   subject: string;
   cc?: string;
   categoryId: string;
@@ -68,8 +77,24 @@ const EmailSendingDialog = () => {
     { id: string; name: string; count: number }[]
   >([]);
 
+  const [recipientError, setRecipientError] = useState("");
+
+  // Recipient mode state
+  const [recipientMode, setRecipientMode] = useState<"single" | "multiple">(
+    "single"
+  );
+
+  // Single recipient states
   const [toEmail, setToEmail] = useState<EmailOption | null>(null);
   const [ccEmail, setCcEmail] = useState<EmailOption | null>(null);
+
+  // Multiple recipients states
+  const [multipleRecipients, setMultipleRecipients] = useState<string[]>([]);
+  const [multipleCcRecipients, setMultipleCcRecipients] = useState<string[]>(
+    []
+  );
+  const [currentToInput, setCurrentToInput] = useState("");
+  const [currentCcInput, setCurrentCcInput] = useState("");
 
   const { user } = useAuthStore();
 
@@ -81,22 +106,96 @@ const EmailSendingDialog = () => {
     formState: { errors },
   } = useForm<FormValues>();
 
+  useEffect(() => {
+    if (recipientMode === "single") {
+      if (toEmail) {
+        setValue("to", toEmail.value);
+      } else {
+        setValue("to", "");
+      }
+    } else {
+      // For multiple mode, concatenate all email addresses
+      const emailString = multipleRecipients.join(";");
+      setValue("toMultiple", emailString);
+    }
+  }, [toEmail, multipleRecipients, recipientMode, setValue]);
 
   useEffect(() => {
-    if (toEmail) {
-      setValue("to", toEmail.value);
+    if (recipientMode === "single") {
+      if (ccEmail) {
+        setValue("cc", ccEmail.value);
+      } else {
+        setValue("cc", "");
+      }
     } else {
-      setValue("to", "");
+      const ccEmailString = multipleCcRecipients.join(";");
+      setValue("cc", ccEmailString);
     }
-  }, [toEmail, setValue]);
+  }, [ccEmail, multipleCcRecipients, recipientMode, setValue]);
 
-  useEffect(() => {
-    if (ccEmail) {
-      setValue("cc", ccEmail.value);
-    } else {
-      setValue("cc", "");
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
+  const addToRecipient = (email: string) => {
+    const trimmedEmail = email.trim();
+    if (
+      trimmedEmail &&
+      validateEmail(trimmedEmail) &&
+      !multipleRecipients.includes(trimmedEmail)
+    ) {
+      setMultipleRecipients([...multipleRecipients, trimmedEmail]);
+      setCurrentToInput("");
+      setRecipientError(""); // Clear error when adding valid recipient
+    } else if (multipleRecipients.includes(trimmedEmail)) {
+      toast.error("Email already added");
+    } else if (!validateEmail(trimmedEmail)) {
+      toast.error("Please enter a valid email address");
     }
-  }, [ccEmail, setValue]);
+  };
+
+  const removeToRecipient = (emailToRemove: string) => {
+    setMultipleRecipients(
+      multipleRecipients.filter((email) => email !== emailToRemove)
+    );
+  };
+
+  const addCcRecipient = (email: string) => {
+    const trimmedEmail = email.trim();
+    if (
+      trimmedEmail &&
+      validateEmail(trimmedEmail) &&
+      !multipleCcRecipients.includes(trimmedEmail)
+    ) {
+      setMultipleCcRecipients([...multipleCcRecipients, trimmedEmail]);
+      setCurrentCcInput("");
+    } else if (multipleCcRecipients.includes(trimmedEmail)) {
+      toast.error("Email already added to CC");
+    } else if (!validateEmail(trimmedEmail)) {
+      toast.error("Please enter a valid email address");
+    }
+  };
+
+  const removeCcRecipient = (emailToRemove: string) => {
+    setMultipleCcRecipients(
+      multipleCcRecipients.filter((email) => email !== emailToRemove)
+    );
+  };
+
+  const handleToKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addToRecipient(currentToInput);
+    }
+  };
+
+  const handleCcKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addCcRecipient(currentCcInput);
+    }
+  };
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -106,110 +205,247 @@ const EmailSendingDialog = () => {
         return;
       }
 
-      if (!data.to) {
-        toast.error("Please select a recipient.");
+      // Determine recipients based on mode
+      let recipients: string[] = [];
+      let ccRecipients: string[] = [];
+
+      if (recipientMode === "single") {
+        if (!data.to) {
+          toast.error("Please select a recipient.");
+          return;
+        }
+        recipients = [data.to];
+        if (data.cc) {
+          ccRecipients = [data.cc];
+        }
+      } else if (multipleRecipients.length === 0) {
+        setRecipientError("At least one recipient is required");
+        toast.error("Please add at least one recipient.");
         return;
-      }
-
-      const res = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: data.to,
-          subject: data.subject,
-          html: content,
-          cc: data.cc,
-          attachments,
-        }),
-      });
-
-      const result = await res.json();
-      if (!result.success) {
-        toast.error("Failed to send email.");
-        return;
-      }
-
-      let receiverData;
-
-      const { data: existingReceiver, error: findError } = await supabase
-        .from("receiver")
-        .select("*")
-        .eq("email", data.to)
-        .single();
-
-      if (existingReceiver) {
-        receiverData = existingReceiver;
-        console.log("Using existing receiver:", existingReceiver.email);
       } else {
-        const { data: newReceiver, error: createError } = await supabase
+        if (multipleRecipients.length === 0) {
+          toast.error("Please add at least one recipient.");
+          return;
+        }
+        recipients = multipleRecipients;
+        ccRecipients = multipleCcRecipients;
+      }
+
+      // Send email to all recipients
+      for (const recipient of recipients) {
+        const res = await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: recipient,
+            subject: data.subject,
+            html: content,
+            cc: ccRecipients.length > 0 ? ccRecipients.join(";") : undefined,
+            attachments,
+          }),
+        });
+
+        const result = await res.json();
+        if (!result.success) {
+          toast.error(`Failed to send email to ${recipient}.`);
+          continue;
+        }
+
+        // Handle receiver data for each recipient
+        let receiverData;
+
+        const { data: existingReceiver, error: findError } = await supabase
           .from("receiver")
-          .insert({
-            firstName: "",
-            lastName: "",
-            email: data.to,
-          })
+          .select("*")
+          .eq("email", recipient)
+          .single();
+
+        if (existingReceiver) {
+          receiverData = existingReceiver;
+          console.log("Using existing receiver:", existingReceiver.email);
+        } else {
+          const { data: newReceiver, error: createError } = await supabase
+            .from("receiver")
+            .insert({
+              firstName: "",
+              lastName: "",
+              email: recipient,
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("Error creating receiver:", createError);
+            toast.error(`Failed to save receiver data for ${recipient}.`);
+            continue;
+          }
+
+          receiverData = newReceiver;
+        }
+
+        const { data: emailSentData, error: emailError } = await supabase
+          .from("email_sent")
+          .insert([
+            {
+              categoryId: data.categoryId || null,
+              tagId: data.tagId || null,
+              templateId: selectedTemplate.id,
+              senderId: user?.id,
+              receiverId: receiverData?.id,
+            },
+          ])
           .select()
           .single();
 
-        if (createError) {
-          console.error("Error creating receiver:", createError);
-          toast.error("Failed to save receiver data.");
-          return;
+        if (emailError) {
+          console.error(emailError);
+          toast.error(`Failed to save email metadata for ${recipient}.`);
+          continue;
         }
 
-        receiverData = newReceiver;
-      }
+        // Only insert new attachments for the first email to avoid duplicates
+        if (recipient === recipients[0]) {
+          const newAttachmentInserts = attachments
+            .filter((file) => !file.id)
+            .map((file) => ({
+              fileUrl: file.url,
+              fileName: file.name,
+              fileType: file.mimeType,
+              size: atob(file.content).length,
+              emailSendId: emailSentData.id,
+              userId: user?.id,
+            }));
 
-      const { data: emailSentData, error: emailError } = await supabase
-        .from("email_sent")
-        .insert([
-          {
-            categoryId: data.categoryId || null,
-            tagId: data.tagId || null,
-            templateId: selectedTemplate.id,
-            senderId: user?.id,
-            receiverId: receiverData?.id,
-          },
-        ])
-        .select()
-        .single();
+          if (newAttachmentInserts.length > 0) {
+            const { error: attachError } = await supabase
+              .from("attachment")
+              .insert(newAttachmentInserts);
 
-      if (emailError) {
-        console.error(emailError);
-        toast.error("Failed to save email metadata.");
-        return;
-      }
-
-      // Only insert new attachments, not existing ones
-      const newAttachmentInserts = attachments
-        .filter((file) => !file.id) // New uploads don't have an id initially
-        .map((file) => ({
-          fileUrl: file.url,
-          fileName: file.name,
-          fileType: file.mimeType,
-          size: atob(file.content).length,
-          emailSendId: emailSentData.id,
-          userId: user?.id,
-        }));
-
-      if (newAttachmentInserts.length > 0) {
-        const { error: attachError } = await supabase
-          .from("attachment")
-          .insert(newAttachmentInserts);
-
-        if (attachError) {
-          console.error(attachError);
-          toast.error("Failed to save new attachments.");
-          return;
+            if (attachError) {
+              console.error(attachError);
+              toast.error("Failed to save new attachments.");
+              return;
+            }
+          }
         }
       }
 
-      toast.success("Email sent and saved successfully!");
+      toast.success(
+        `Email sent successfully to ${recipients.length} recipient(s)!`
+      );
+
+      // Send email to all recipients
+      for (const recipient of recipients) {
+        const res = await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: recipient,
+            subject: data.subject,
+            html: content,
+            cc: ccRecipients.length > 0 ? ccRecipients.join(";") : undefined,
+            attachments,
+          }),
+        });
+
+        const result = await res.json();
+        if (!result.success) {
+          toast.error(`Failed to send email to ${recipient}.`);
+          continue;
+        }
+
+        // Handle receiver data for each recipient
+        let receiverData;
+
+        const { data: existingReceiver, error: findError } = await supabase
+          .from("receiver")
+          .select("*")
+          .eq("email", recipient)
+          .single();
+
+        if (existingReceiver) {
+          receiverData = existingReceiver;
+          console.log("Using existing receiver:", existingReceiver.email);
+        } else {
+          const { data: newReceiver, error: createError } = await supabase
+            .from("receiver")
+            .insert({
+              firstName: "",
+              lastName: "",
+              email: recipient,
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("Error creating receiver:", createError);
+            toast.error(`Failed to save receiver data for ${recipient}.`);
+            continue;
+          }
+
+          receiverData = newReceiver;
+        }
+
+        const { data: emailSentData, error: emailError } = await supabase
+          .from("email_sent")
+          .insert([
+            {
+              categoryId: data.categoryId || null,
+              tagId: data.tagId || null,
+              templateId: selectedTemplate.id,
+              senderId: user?.id,
+              receiverId: receiverData?.id,
+            },
+          ])
+          .select()
+          .single();
+
+        if (emailError) {
+          console.error(emailError);
+          toast.error(`Failed to save email metadata for ${recipient}.`);
+          continue;
+        }
+
+        // Only insert new attachments for the first email to avoid duplicates
+        if (recipient === recipients[0]) {
+          const newAttachmentInserts = attachments
+            .filter((file) => !file.id)
+            .map((file) => ({
+              fileUrl: file.url,
+              fileName: file.name,
+              fileType: file.mimeType,
+              size: atob(file.content).length,
+              emailSendId: emailSentData.id,
+              userId: user?.id,
+            }));
+
+          if (newAttachmentInserts.length > 0) {
+            const { error: attachError } = await supabase
+              .from("attachment")
+              .insert(newAttachmentInserts);
+
+            if (attachError) {
+              console.error(attachError);
+              toast.error("Failed to save new attachments.");
+              return;
+            }
+          }
+        }
+      }
+
+      toast.success(
+        `Email sent successfully to ${recipients.length} recipient(s)!`
+      );
 
       // Reset form
       reset();
       setToEmail(null);
       setCcEmail(null);
+      setMultipleRecipients([]);
+      setMultipleCcRecipients([]);
+      setCurrentToInput("");
+      setCurrentCcInput("");
+      setRecipientError("");
       setContent("");
       setSelectedTemplate({ id: "", content: "" });
       setAttachments([]);
@@ -251,7 +487,7 @@ const EmailSendingDialog = () => {
       });
 
       uploaded.push({
-        id: "", // New uploads start without ID
+        id: "",
         name: file.name,
         fileName: file.name,
         url: publicUrl,
@@ -268,8 +504,7 @@ const EmailSendingDialog = () => {
   };
 
   const handleDelete = async (filePath: string) => {
-    // For new uploads, delete from storage
-    if (!filePath.startsWith('http')) {
+    if (!filePath.startsWith("http")) {
       const { error } = await supabase.storage
         .from("attachments")
         .remove([filePath]);
@@ -280,7 +515,6 @@ const EmailSendingDialog = () => {
       }
     }
 
-    // Remove from state (works for both new uploads and existing files)
     setAttachments((prev) => prev.filter((file) => file.path !== filePath));
   };
 
@@ -316,9 +550,9 @@ const EmailSendingDialog = () => {
         </DialogTrigger>
 
         <DialogContent className="sm:max-w-4xl p-0 border-none dark:shadow-white/30 rounded-lg overflow-hidden">
-          <div className=" flex flex-col">
+          <div className="flex flex-col">
             <DialogTitle>
-              <div className="px-4 py-3 border-b text-sm font-medium ">
+              <div className="px-4 py-3 border-b text-sm font-medium">
                 New Message
               </div>
             </DialogTitle>
@@ -327,20 +561,172 @@ const EmailSendingDialog = () => {
               onSubmit={handleSubmit(onSubmit)}
               className="flex flex-col space-y-3 px-4 py-3"
             >
-              <div>
-                <ReceiverEmailSelect value={toEmail} onChange={setToEmail} />
-                {errors.to && (
-                  <span className="text-red-500 text-xs">
-                    Recipient is required
-                  </span>
-                )}
+              {/* Recipient Mode Toggle */}
+              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                <Label className="text-sm font-medium">Send to:</Label>
+                <Button
+                  type="button"
+                  variant={recipientMode === "single" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setRecipientMode("single");
+                    setRecipientError("");
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <User className="h-4 w-4" />
+                  Single
+                </Button>
+                <Button
+                  type="button"
+                  variant={recipientMode === "multiple" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setRecipientMode("multiple");
+                    setRecipientError("");
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <Users className="h-4 w-4" />
+                  Multiple
+                </Button>
               </div>
 
+              {/* Recipients Section */}
+              {recipientMode === "single" ? (
+                // Single Recipient Mode
+                <>
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">To</Label>
+                    <ReceiverEmailSelect
+                      value={toEmail}
+                      onChange={setToEmail}
+                    />
+                    {errors.to && (
+                      <span className="text-red-500 text-xs">
+                        Recipient is required
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">
+                      CC (optional)
+                    </Label>
+                    <ReceiverEmailSelect
+                      placeholder="Add CC recipient"
+                      value={ccEmail}
+                      onChange={setCcEmail}
+                    />
+                  </div>
+                </>
+              ) : (
+                // Multiple Recipients Mode
+                <>
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">To Recipients</Label>
+
+                    <div className="relative">
+                      <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-background min-h-[50px] items-center">
+                        {/* Email Tags */}
+                        {multipleRecipients.map((email, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm"
+                          >
+                            <span>{email}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeToRecipient(email)}
+                              className="hover:bg-red-100 hover:text-red-600 rounded-full p-0.5"
+                            >
+                              <XIcon className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Input Field */}
+                        <input
+                          type="email"
+                          value={currentToInput}
+                          onChange={(e) => setCurrentToInput(e.target.value)}
+                          onKeyPress={handleToKeyPress}
+                          onBlur={() =>
+                            currentToInput.trim() &&
+                            addToRecipient(currentToInput)
+                          }
+                          placeholder={
+                            multipleRecipients.length === 0
+                              ? "Type email and press Enter..."
+                              : "Add another email..."
+                          }
+                          className="flex-1 outline-none bg-transparent min-w-[200px] text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {recipientError && multipleRecipients.length === 0 && (
+                      <span className="text-red-500 text-xs">
+                        {recipientError}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
+                      CC Recipients (optional)
+                    </Label>
+
+                    <div className="relative">
+                      <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-background min-h-[50px] items-center">
+                        {/* CC Email Tags */}
+                        {multipleCcRecipients.map((email, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1 bg-secondary/50 text-secondary-foreground px-2 py-1 rounded-md text-sm"
+                          >
+                            <span>{email}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeCcRecipient(email)}
+                              className="hover:bg-red-100 hover:text-red-600 rounded-full p-0.5"
+                            >
+                              <XIcon className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* CC Input Field */}
+                        <input
+                          type="email"
+                          value={currentCcInput}
+                          onChange={(e) => setCurrentCcInput(e.target.value)}
+                          onKeyPress={handleCcKeyPress}
+                          onBlur={() =>
+                            currentCcInput.trim() &&
+                            addCcRecipient(currentCcInput)
+                          }
+                          placeholder={
+                            multipleCcRecipients.length === 0
+                              ? "Type CC email and press Enter..."
+                              : "Add another CC email..."
+                          }
+                          className="flex-1 outline-none bg-transparent min-w-[200px] text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              {/* Subject */}
               <div>
                 <Input
                   id="subject"
                   placeholder="Subject"
-                  className="text-sm "
+                  className="text-sm"
                   {...register("subject", { required: "Subject is required" })}
                 />
                 {errors.subject && (
@@ -350,14 +736,7 @@ const EmailSendingDialog = () => {
                 )}
               </div>
 
-              <div>
-                <ReceiverEmailSelect
-                  placeholder="cc"
-                  value={ccEmail}
-                  onChange={setCcEmail}
-                />
-              </div>
-
+              {/* Category and Tag */}
               <div className="flex gap-3 w-full">
                 <div className="w-full space-y-2">
                   <Label htmlFor="categoryId">Category</Label>
@@ -402,6 +781,7 @@ const EmailSendingDialog = () => {
                 </div>
               </div>
 
+              {/* Message */}
               <div className="space-y-3">
                 <Label>Message</Label>
                 <RichTextEditor
@@ -476,6 +856,12 @@ const EmailSendingDialog = () => {
                 <Button type="submit" className="bg-primary text-white">
                   <Send className="h-4 w-4 mr-1" />
                   Send
+                  {recipientMode === "multiple" &&
+                    multipleRecipients.length > 0 && (
+                      <span className="ml-1 text-xs bg-white/20 rounded px-1">
+                        {multipleRecipients.length}
+                      </span>
+                    )}
                 </Button>
               </div>
             </form>

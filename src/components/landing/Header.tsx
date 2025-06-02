@@ -19,12 +19,22 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleSmoothScroll = (e: React.MouseEvent, targetId: string) => {
+    e.preventDefault();
+    setIsMobileMenuOpen(false);
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
+
   return (
     <header
-      className={`sticky-nav transition-all duration-300 ${
-        isScrolled
-          ? "glassmorphism py-3 shadow-md"
-          : "bg-background/95 py-4 backdrop-blur-sm"
+      className={`fixed w-full z-50 bg-white dark:bg-gray-950 transition-all duration-300 ${
+        isScrolled ? "py-3 shadow-md" : "py-4"
       }`}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -66,19 +76,22 @@ export function Header() {
             >
               <Link
                 href="#features"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors focus:text-primary focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                onClick={(e) => handleSmoothScroll(e, "features")}
               >
                 Features
               </Link>
               <Link
                 href="#testimonials"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors focus:text-primary focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                onClick={(e) => handleSmoothScroll(e, "testimonials")}
               >
                 Testimonials
               </Link>
               <Link
                 href="#pricing"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors focus:text-primary focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                onClick={(e) => handleSmoothScroll(e, "pricing")}
               >
                 Pricing
               </Link>
@@ -93,13 +106,13 @@ export function Header() {
             >
               <Link
                 href="/sign-in"
-                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors focus:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
               >
                 Sign in
               </Link>
               <Link href="/sign-up">
                 <Button
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="bg-primary text-white hover:bg-primary/90 rounded-md shadow-sm"
                   size="sm"
                 >
                   Get Started
@@ -110,7 +123,7 @@ export function Header() {
 
           {/* Mobile menu button */}
           <motion.button
-            className="block md:hidden p-2 rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
+            className="block md:hidden p-2 rounded-md hover:bg-muted focus:outline-none"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -129,54 +142,52 @@ export function Header() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            className="md:hidden glassmorphism absolute left-0 right-0 top-full z-20 px-4 py-6 shadow-lg"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="md:hidden fixed left-0 right-0 top-16 z-50 bg-white dark:bg-gray-900 shadow-lg border-t border-gray-200 dark:border-gray-800"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
           >
-            <nav className="flex flex-col space-y-4">
+            <nav className="flex flex-col space-y-4 px-4 py-6">
               <Link
                 href="#features"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors focus:text-primary focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
-                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors py-2"
+                onClick={(e) => handleSmoothScroll(e, "features")}
               >
                 Features
               </Link>
               <Link
                 href="#testimonials"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors focus:text-primary focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
-                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors py-2"
+                onClick={(e) => handleSmoothScroll(e, "testimonials")}
               >
                 Testimonials
               </Link>
               <Link
                 href="#pricing"
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors focus:text-primary focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
-                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors py-2"
+                onClick={(e) => handleSmoothScroll(e, "pricing")}
               >
                 Pricing
               </Link>
-              <div className="flex flex-col space-y-4 pt-4">
+              <div className="flex flex-col space-y-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                 <Link
                   href="/sign-in"
-                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors focus:text-primary/80 focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors py-2"
                 >
                   Sign in
                 </Link>
-                <Link
-                  href="/sign-up"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
+                <Link href="/sign-up">
                   <Button
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-md w-full shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-md w-full shadow-sm"
                     size="sm"
                   >
                     Get Started
                   </Button>
                 </Link>
-                <ThemeToggle />
+                <div className="flex justify-center pt-2">
+                  <ThemeToggle />
+                </div>
               </div>
             </nav>
           </motion.div>

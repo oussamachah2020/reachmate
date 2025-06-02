@@ -233,7 +233,7 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
                 src="/placeholder.svg"
                 alt={`${currentEmail.sender.firstName} ${currentEmail.sender.lastName}`}
               />
-              <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600  font-semibold">
+              <AvatarFallback className="text-white bg-gradient-to-br from-green-500 to-emerald-600  font-semibold">
                 {currentEmail.sender.firstName.charAt(0)}
                 {currentEmail.sender.lastName.charAt(0)}
               </AvatarFallback>

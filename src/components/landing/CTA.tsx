@@ -14,7 +14,7 @@ export function CTA() {
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-green-500/80 to-green-500/80 animated-gradient" />
+        <div className="absolute inset-0 bg-primary animated-gradient" />
 
         {/* Decorative elements */}
         <motion.div
@@ -73,9 +73,9 @@ export function CTA() {
               <Link href="/sign-up">
                 <Button
                   size="lg"
-                  className="bg-white cursor-pointer text-primary hover:bg-white/20 transition-all"
+                  className="bg-white cursor-pointer text-primary hover:bg-white"
                 >
-                  <span className="text-white">Start Free Trial</span>
+                  <span className="text-primary">Start Free Trial</span>
                   <motion.span
                     className="ml-1"
                     animate={{
@@ -97,7 +97,7 @@ export function CTA() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+                  className="border-white/30 bg-white/10 text-white hover:text-primary"
                 >
                   Request Demo
                 </Button>
