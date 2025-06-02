@@ -218,12 +218,9 @@ const EmailSendingDialog = () => {
         if (data.cc) {
           ccRecipients = [data.cc];
         }
-      } else if (multipleRecipients.length === 0) {
-        setRecipientError("At least one recipient is required");
-        toast.error("Please add at least one recipient.");
-        return;
       } else {
         if (multipleRecipients.length === 0) {
+          setRecipientError("At least one recipient is required");
           toast.error("Please add at least one recipient.");
           return;
         }
@@ -231,8 +228,43 @@ const EmailSendingDialog = () => {
         ccRecipients = multipleCcRecipients;
       }
 
-      // Send email to all recipients
+      // First, create all receivers in Supabase
+      const receiverIds: string[] = [];
       for (const recipient of recipients) {
+        let receiverId: string;
+
+        const { data: existingReceiver } = await supabase
+          .from("receiver")
+          .select("id")
+          .eq("email", recipient)
+          .single();
+
+        if (existingReceiver) {
+          receiverId = existingReceiver.id;
+        } else {
+          const { data: newReceiver, error: createError } = await supabase
+            .from("receiver")
+            .insert({
+              firstName: "",
+              lastName: "",
+              email: recipient,
+            })
+            .select("id")
+            .single();
+
+          if (createError) {
+            console.error("Error creating receiver:", createError);
+            toast.error(`Failed to save receiver data for ${recipient}.`);
+            continue;
+          }
+          receiverId = newReceiver.id;
+        }
+        receiverIds.push(receiverId);
+      }
+
+      // Then send all emails and create records
+      const sendPromises = recipients.map(async (recipient, index) => {
+        // Send email
         const res = await fetch("/api/send-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -247,64 +279,56 @@ const EmailSendingDialog = () => {
 
         const result = await res.json();
         if (!result.success) {
-          toast.error(`Failed to send email to ${recipient}.`);
-          continue;
+          throw new Error(`Failed to send email to ${recipient}`);
         }
 
-        // Handle receiver data for each recipient
-        let receiverData;
-
-        const { data: existingReceiver, error: findError } = await supabase
-          .from("receiver")
-          .select("*")
-          .eq("email", recipient)
-          .single();
-
-        if (existingReceiver) {
-          receiverData = existingReceiver;
-          console.log("Using existing receiver:", existingReceiver.email);
-        } else {
-          const { data: newReceiver, error: createError } = await supabase
-            .from("receiver")
-            .insert({
-              firstName: "",
-              lastName: "",
-              email: recipient,
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error("Error creating receiver:", createError);
-            toast.error(`Failed to save receiver data for ${recipient}.`);
-            continue;
-          }
-
-          receiverData = newReceiver;
-        }
-
-        const { data: emailSentData, error: emailError } = await supabase
-          .from("email_sent")
-          .insert([
-            {
-              categoryId: data.categoryId || null,
-              tagId: data.tagId || null,
-              templateId: selectedTemplate.id,
-              senderId: user?.id,
-              receiverId: receiverData?.id,
-            },
-          ])
-          .select()
-          .single();
+        // Create email_sent record
+        const { error: emailError } = await supabase.from("email_sent").insert({
+          categoryId: data.categoryId || null,
+          tagId: data.tagId || null,
+          templateId: selectedTemplate.id,
+          senderId: user?.id,
+          receiverId: receiverIds[index],
+        });
 
         if (emailError) {
-          console.error(emailError);
-          toast.error(`Failed to save email metadata for ${recipient}.`);
-          continue;
+          throw new Error(`Failed to save email metadata for ${recipient}`);
         }
 
-        // Only insert new attachments for the first email to avoid duplicates
-        if (recipient === recipients[0]) {
+        return { success: true, recipient };
+      });
+
+      // Wait for all sends to complete
+      const results = await Promise.allSettled(sendPromises);
+
+      // Handle results
+      const successfulSends = results.filter(
+        (r) => r.status === "fulfilled"
+      ).length;
+      const failedSends = results.filter((r) => r.status === "rejected");
+
+      if (failedSends.length > 0) {
+        console.error("Failed sends:", failedSends);
+        toast.error(
+          `Failed to send ${failedSends.length} of ${recipients.length} emails.`
+        );
+      }
+
+      if (successfulSends > 0) {
+        toast.success(
+          `Email sent successfully to ${successfulSends} recipient(s)!`
+        );
+      }
+
+      // Save attachments only once (for the first recipient)
+      if (recipients.length > 0 && attachments.length > 0) {
+        const { data: emailSentData } = await supabase
+          .from("email_sent")
+          .select("id")
+          .eq("receiverId", receiverIds[0])
+          .single();
+
+        if (emailSentData) {
           const newAttachmentInserts = attachments
             .filter((file) => !file.id)
             .map((file) => ({
@@ -324,118 +348,10 @@ const EmailSendingDialog = () => {
             if (attachError) {
               console.error(attachError);
               toast.error("Failed to save new attachments.");
-              return;
             }
           }
         }
       }
-
-      toast.success(
-        `Email sent successfully to ${recipients.length} recipient(s)!`
-      );
-
-      // Send email to all recipients
-      for (const recipient of recipients) {
-        const res = await fetch("/api/send-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: recipient,
-            subject: data.subject,
-            html: content,
-            cc: ccRecipients.length > 0 ? ccRecipients.join(";") : undefined,
-            attachments,
-          }),
-        });
-
-        const result = await res.json();
-        if (!result.success) {
-          toast.error(`Failed to send email to ${recipient}.`);
-          continue;
-        }
-
-        // Handle receiver data for each recipient
-        let receiverData;
-
-        const { data: existingReceiver, error: findError } = await supabase
-          .from("receiver")
-          .select("*")
-          .eq("email", recipient)
-          .single();
-
-        if (existingReceiver) {
-          receiverData = existingReceiver;
-          console.log("Using existing receiver:", existingReceiver.email);
-        } else {
-          const { data: newReceiver, error: createError } = await supabase
-            .from("receiver")
-            .insert({
-              firstName: "",
-              lastName: "",
-              email: recipient,
-            })
-            .select()
-            .single();
-
-          if (createError) {
-            console.error("Error creating receiver:", createError);
-            toast.error(`Failed to save receiver data for ${recipient}.`);
-            continue;
-          }
-
-          receiverData = newReceiver;
-        }
-
-        const { data: emailSentData, error: emailError } = await supabase
-          .from("email_sent")
-          .insert([
-            {
-              categoryId: data.categoryId || null,
-              tagId: data.tagId || null,
-              templateId: selectedTemplate.id,
-              senderId: user?.id,
-              receiverId: receiverData?.id,
-            },
-          ])
-          .select()
-          .single();
-
-        if (emailError) {
-          console.error(emailError);
-          toast.error(`Failed to save email metadata for ${recipient}.`);
-          continue;
-        }
-
-        // Only insert new attachments for the first email to avoid duplicates
-        if (recipient === recipients[0]) {
-          const newAttachmentInserts = attachments
-            .filter((file) => !file.id)
-            .map((file) => ({
-              fileUrl: file.url,
-              fileName: file.name,
-              fileType: file.mimeType,
-              size: atob(file.content).length,
-              emailSendId: emailSentData.id,
-              userId: user?.id,
-            }));
-
-          if (newAttachmentInserts.length > 0) {
-            const { error: attachError } = await supabase
-              .from("attachment")
-              .insert(newAttachmentInserts);
-
-            if (attachError) {
-              console.error(attachError);
-              toast.error("Failed to save new attachments.");
-              return;
-            }
-          }
-        }
-      }
-
-      toast.success(
-        `Email sent successfully to ${recipients.length} recipient(s)!`
-      );
 
       // Reset form
       reset();
@@ -454,7 +370,6 @@ const EmailSendingDialog = () => {
       toast.error("Something went wrong.");
     }
   };
-
   const handleFileUpload = async (files: FileList | null) => {
     if (!files) return;
     setUploading(true);
