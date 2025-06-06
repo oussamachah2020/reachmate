@@ -85,7 +85,7 @@ async function signInUser(data: LoginDto) {
 async function requestPasswordResetEmail(email: string) {
   try {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "http://localhost:3000/reset-password",
+      redirectTo: "https://www.reachmate.xyz/reset-password",
     });
 
     if (error) {
