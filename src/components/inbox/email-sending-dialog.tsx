@@ -1,3 +1,8 @@
+// Fixing issue: User can only select a template, not write emails
+// - Make RichTextEditor read-only to prevent direct editing
+// - Ensure content is set only from selectedTemplate
+// Fixing form submission to ensure proper recipient handling
+// - Ensure recipients and CC are correctly formatted for API
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -35,18 +40,7 @@ import { toast } from "sonner";
 import { ReceiverEmailSelect } from "./receiver-email-creatble-select";
 import AttachmentsDialog from "./attachments-dialog";
 import { Separator } from "../ui/separator";
-
-type Attachment = {
-  id: string;
-  name: string;
-  fileName: string;
-  url: string;
-  fileUrl: string;
-  path: string;
-  mimeType: string;
-  fileType: string;
-  content: string;
-};
+import { Attachment } from "@/types/inbox";
 
 type FormValues = {
   to: string;
@@ -78,17 +72,13 @@ const EmailSendingDialog = () => {
   >([]);
 
   const [recipientError, setRecipientError] = useState("");
-
-  // Recipient mode state
   const [recipientMode, setRecipientMode] = useState<"single" | "multiple">(
     "single"
   );
 
-  // Single recipient states
   const [toEmail, setToEmail] = useState<EmailOption | null>(null);
   const [ccEmail, setCcEmail] = useState<EmailOption | null>(null);
 
-  // Multiple recipients states
   const [multipleRecipients, setMultipleRecipients] = useState<string[]>([]);
   const [multipleCcRecipients, setMultipleCcRecipients] = useState<string[]>(
     []
@@ -96,7 +86,7 @@ const EmailSendingDialog = () => {
   const [currentToInput, setCurrentToInput] = useState("");
   const [currentCcInput, setCurrentCcInput] = useState("");
 
-  const { user } = useAuthStore();
+  const { user, sender } = useAuthStore();
 
   const {
     register,
@@ -114,7 +104,6 @@ const EmailSendingDialog = () => {
         setValue("to", "");
       }
     } else {
-      // For multiple mode, concatenate all email addresses
       const emailString = multipleRecipients.join(";");
       setValue("toMultiple", emailString);
     }
@@ -147,7 +136,7 @@ const EmailSendingDialog = () => {
     ) {
       setMultipleRecipients([...multipleRecipients, trimmedEmail]);
       setCurrentToInput("");
-      setRecipientError(""); // Clear error when adding valid recipient
+      setRecipientError("");
     } else if (multipleRecipients.includes(trimmedEmail)) {
       toast.error("Email already added");
     } else if (!validateEmail(trimmedEmail)) {
@@ -205,7 +194,11 @@ const EmailSendingDialog = () => {
         return;
       }
 
-      // Determine recipients based on mode
+      if (!selectedTemplate.id) {
+        toast.error("Please select a template.");
+        return;
+      }
+
       let recipients: string[] = [];
       let ccRecipients: string[] = [];
 
@@ -228,7 +221,6 @@ const EmailSendingDialog = () => {
         ccRecipients = multipleCcRecipients;
       }
 
-      // First, create all receivers in Supabase
       const receiverIds: string[] = [];
       for (const recipient of recipients) {
         let receiverId: string;
@@ -262,17 +254,17 @@ const EmailSendingDialog = () => {
         receiverIds.push(receiverId);
       }
 
-      // Then send all emails and create records
-      const sendPromises = recipients.map(async (recipient, index) => {
-        // Send email
+      const sendPromises = receiverIds.map(async (receiverId, index) => {
+        const recipient = recipients[index];
         const res = await fetch("/api/send-email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            senderName: `${sender?.firstName} ${sender?.lastName}`,
             to: recipient,
             subject: data.subject,
-            html: content,
-            cc: ccRecipients.length > 0 ? ccRecipients.join(";") : undefined,
+            html: selectedTemplate.content, // Use template content only
+            cc: ccRecipients.length > 0 ? ccRecipients : undefined,
             attachments,
           }),
         });
@@ -282,13 +274,12 @@ const EmailSendingDialog = () => {
           throw new Error(`Failed to send email to ${recipient}`);
         }
 
-        // Create email_sent record
         const { error: emailError } = await supabase.from("email_sent").insert({
           categoryId: data.categoryId || null,
           tagId: data.tagId || null,
           templateId: selectedTemplate.id,
           senderId: user?.id,
-          receiverId: receiverIds[index],
+          receiverId,
         });
 
         if (emailError) {
@@ -298,10 +289,8 @@ const EmailSendingDialog = () => {
         return { success: true, recipient };
       });
 
-      // Wait for all sends to complete
       const results = await Promise.allSettled(sendPromises);
 
-      // Handle results
       const successfulSends = results.filter(
         (r) => r.status === "fulfilled"
       ).length;
@@ -320,7 +309,6 @@ const EmailSendingDialog = () => {
         );
       }
 
-      // Save attachments only once (for the first recipient)
       if (recipients.length > 0 && attachments.length > 0) {
         const { data: emailSentData } = await supabase
           .from("email_sent")
@@ -353,7 +341,6 @@ const EmailSendingDialog = () => {
         }
       }
 
-      // Reset form
       reset();
       setToEmail(null);
       setCcEmail(null);
@@ -370,6 +357,7 @@ const EmailSendingDialog = () => {
       toast.error("Something went wrong.");
     }
   };
+
   const handleFileUpload = async (files: FileList | null) => {
     if (!files) return;
     setUploading(true);
@@ -477,7 +465,7 @@ const EmailSendingDialog = () => {
               className="flex flex-col space-y-3 px-4 py-3"
             >
               {/* Recipient Mode Toggle */}
-              <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 p-3 rounded-lg">
                 <Label className="text-sm font-medium">Send to:</Label>
                 <Button
                   type="button"
@@ -509,7 +497,6 @@ const EmailSendingDialog = () => {
 
               {/* Recipients Section */}
               {recipientMode === "single" ? (
-                // Single Recipient Mode
                 <>
                   <div>
                     <Label className="text-sm font-medium mb-2 block">To</Label>
@@ -536,14 +523,11 @@ const EmailSendingDialog = () => {
                   </div>
                 </>
               ) : (
-                // Multiple Recipients Mode
                 <>
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">To Recipients</Label>
-
                     <div className="relative">
                       <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-background min-h-[50px] items-center">
-                        {/* Email Tags */}
                         {multipleRecipients.map((email, index) => (
                           <div
                             key={index}
@@ -559,8 +543,6 @@ const EmailSendingDialog = () => {
                             </button>
                           </div>
                         ))}
-
-                        {/* Input Field */}
                         <input
                           type="email"
                           value={currentToInput}
@@ -579,7 +561,6 @@ const EmailSendingDialog = () => {
                         />
                       </div>
                     </div>
-
                     {recipientError && multipleRecipients.length === 0 && (
                       <span className="text-red-500 text-xs">
                         {recipientError}
@@ -591,10 +572,8 @@ const EmailSendingDialog = () => {
                     <Label className="text-sm font-medium">
                       CC Recipients (optional)
                     </Label>
-
                     <div className="relative">
                       <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-background min-h-[50px] items-center">
-                        {/* CC Email Tags */}
                         {multipleCcRecipients.map((email, index) => (
                           <div
                             key={index}
@@ -610,8 +589,6 @@ const EmailSendingDialog = () => {
                             </button>
                           </div>
                         ))}
-
-                        {/* CC Input Field */}
                         <input
                           type="email"
                           value={currentCcInput}
@@ -636,7 +613,6 @@ const EmailSendingDialog = () => {
 
               <Separator />
 
-              {/* Subject */}
               <div>
                 <Input
                   id="subject"
@@ -651,7 +627,6 @@ const EmailSendingDialog = () => {
                 )}
               </div>
 
-              {/* Category and Tag */}
               <div className="flex gap-3 w-full">
                 <div className="w-full space-y-2">
                   <Label htmlFor="categoryId">Category</Label>
@@ -696,17 +671,15 @@ const EmailSendingDialog = () => {
                 </div>
               </div>
 
-              {/* Message */}
               <div className="space-y-3">
-                <Label>Message</Label>
+                <Label>Message (Template)</Label>
                 <RichTextEditor
-                  value={content}
+                  value={selectedTemplate.content}
                   htmlContent={selectedTemplate.content}
-                  onChange={setContent}
+                  onChange={() => {}} // Disable direct editing
                 />
               </div>
 
-              {/* Attachments Display */}
               {attachments.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {attachments.map((file, index) => (
@@ -735,7 +708,6 @@ const EmailSendingDialog = () => {
                 </div>
               )}
 
-              {/* Footer Actions */}
               <div className="flex justify-between items-center pt-2 border-t mt-4">
                 <div className="flex items-center space-x-2">
                   <TemplatePickerDialog
@@ -744,7 +716,6 @@ const EmailSendingDialog = () => {
                         id: template.id,
                         content: template.content,
                       });
-                      setContent(template.content);
                     }}
                   />
                   <label

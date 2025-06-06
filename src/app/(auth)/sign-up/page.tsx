@@ -76,22 +76,18 @@ export default function SignUpPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
-        <div className="flex justify-center items-center flex-col text-center">
-          <img
-            src={Logo.src}
-            alt="reachmate-logo"
-            className="w-[50%] h-[50%]"
-          />
-          <p className="mt-2 text-sm text-gray-600">
-            Professional email management solution
-          </p>
+        <div className="flex justify-center flex-row items-center gap-3 pt-4">
+          <div className="h-16 w-16 rounded-full bg-primary shadow-md flex items-center justify-center">
+            <Mail className="h-12 w-12 text-primary-foreground dark:text-white" />
+          </div>
+          <span className="text-4xl font-semibold dark:text-white">
+            ReachMate
+          </span>
         </div>
 
         <Card className="border-gray-200 shadow-none">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl text-gray-800">
-              Create your account
-            </CardTitle>
+            <CardTitle className="text-xl ">Create your account</CardTitle>
             <CardDescription>
               Enter your information to get started
             </CardDescription>
@@ -108,7 +104,7 @@ export default function SignUpPage() {
                   </Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <User className="h-5 w-5 text-gray-400" />
+                      <User className="h-5 w-5 " />
                     </div>
                     <Input
                       id="firstName"
@@ -160,7 +156,7 @@ export default function SignUpPage() {
                 </Label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <Mail className="h-5 w-5 " />
                   </div>
                   <Input
                     id="email"
@@ -193,7 +189,7 @@ export default function SignUpPage() {
                 </Label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <Lock className="h-5 w-5 " />
                   </div>
                   <Input
                     id="password"
@@ -218,7 +214,7 @@ export default function SignUpPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 "
                     tabIndex={-1}
                   >
                     {showPassword ? (
@@ -233,7 +229,7 @@ export default function SignUpPage() {
                     {errors.password.message}
                   </p>
                 ) : (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs">
                     Must be at least 8 characters with a number and a special
                     character
                   </p>
@@ -287,7 +283,7 @@ export default function SignUpPage() {
                 <label
                   htmlFor="terms"
                   className={`text-sm font-medium leading-none ${
-                    errors.terms ? "text-destructive" : "text-gray-700"
+                    errors.terms ? "text-destructive" : ""
                   }`}
                 >
                   I agree to the{" "}
@@ -312,13 +308,17 @@ export default function SignUpPage() {
                 </p>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full text-white"
+                disabled={isLoading}
+              >
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center my-3">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm">
               Already have an account?{" "}
               <Link
                 href="/sign-in"

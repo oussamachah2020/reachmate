@@ -4,6 +4,7 @@ import { Session } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import React, { ReactNode, useEffect, useState } from "react";
 import Cookies from "js-cookie";
+import Loader from "@/components/loader";
 
 type Props = {
   children: ReactNode;
@@ -29,22 +30,14 @@ const AuthLayout = ({ children }: Props) => {
     setHasHydrated(true);
   }, []);
 
-
   useEffect(() => {
     if (hasHydrated && session && user) {
-      router.replace("/home");
+      router.replace("/setup");
     }
   }, [hasHydrated, session, user]);
 
   if (!hasHydrated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
-        <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-green-600 text-lg font-medium">
-          Loading your inbox...
-        </p>
-      </div>
-    );
+    return <Loader />;
   }
 
   return <>{children}</>;

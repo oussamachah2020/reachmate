@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/zustand/auth.store";
 import Cookies from "js-cookie";
 import { Session } from "@supabase/supabase-js";
+import Loader from "@/components/loader";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -39,14 +40,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [hasHydrated, session, user]);
 
   if (!hasHydrated) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen ">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-primary text-lg font-medium">
-          Loading your inbox...
-        </p>
-      </div>
-    );
+    return <Loader />;
   }
 
   return (

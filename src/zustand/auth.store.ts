@@ -3,10 +3,16 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { Session, User } from "@supabase/supabase-js";
 import Cookies from "js-cookie";
 
-// Define types for the auth store
+type Sender = {
+  firstName: string;
+  lastName: string;
+};
+
 interface AuthState {
   session: Session | null;
   user: User | null;
+  sender: Sender | null;
+  setSender: (value: Sender | null) => void;
   setAuth: (session: Session | null, user: User | null) => void;
   clearAuth: () => void;
 }
@@ -33,8 +39,10 @@ const cookieStorage = {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      session: cookieStorage.getItem("auth-session"), // initialize from cookie
+      session: cookieStorage.getItem("auth-session"),
+      sender: null,
       user: null,
+      setSender: (value) => set(() => ({ sender: value })),
       setAuth: (session, user) => {
         // Sync session to cookies manually
         if (session) {
@@ -53,7 +61,8 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "auth-storage",
       partialize: (state) => ({
-        user: state.user, // only persist user in localStorage
+        user: state.user,
+        sender: state.sender,
       }),
       storage: createJSONStorage(() => localStorage),
     }

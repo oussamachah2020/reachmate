@@ -17,8 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Logo from "@/../public/logo-2.svg";
+import WhiteLogo from "@/../public/logo-white.svg";
 import { signInUser } from "@/loaders/auth";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 
 interface SignInFormData {
   email: string;
@@ -28,6 +30,7 @@ interface SignInFormData {
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { theme } = useTheme();
 
   const {
     register,
@@ -55,22 +58,18 @@ export default function SignInPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
-        <div className="flex justify-center items-center flex-col text-center">
-          <img
-            src={Logo.src}
-            alt="reachmate-logo"
-            className="w-[50%] h-[50%]"
-          />
-          <p className="mt-2 text-sm text-gray-600">
-            Professional email management solution
-          </p>
+        <div className="flex justify-center flex-row items-center gap-3 pt-4">
+          <div className="h-16 w-16 rounded-full bg-primary shadow-md flex items-center justify-center">
+            <Mail className="h-12 w-12 text-primary-foreground dark:text-white" />
+          </div>
+          <span className="text-4xl font-semibold dark:text-white">
+            ReachMate
+          </span>
         </div>
 
         <Card className="border-gray-200 shadow-none">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl text-gray-800">
-              Sign in to your account
-            </CardTitle>
+            <CardTitle className="text-xl ">Sign in to your account</CardTitle>
             <CardDescription>
               Enter your credentials to access your dashboard
             </CardDescription>
@@ -164,13 +163,17 @@ export default function SignInPage() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full text-white"
+                disabled={isLoading}
+              >
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center my-3">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm ">
               Don't have an account?{" "}
               <Link
                 href="/sign-up"

@@ -52,7 +52,7 @@ type EmailOption = {
 export default function ComposeEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuthStore();
+  const { user, sender } = useAuthStore();
 
   const {
     register,
@@ -84,7 +84,6 @@ export default function ComposeEmailPage() {
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
 
   const watchedTo = watch("to");
-  const watchedCc = watch("cc");
   const watchedSubject = watch("subject");
 
   // Handle email option changes
@@ -212,6 +211,7 @@ export default function ComposeEmailPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          senderName: `${sender?.firstName} ${sender?.lastName}`,
           to: data.to,
           subject: data.subject,
           html: content,

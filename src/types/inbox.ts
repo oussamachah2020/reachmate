@@ -34,3 +34,15 @@ export interface Email {
     subject: string;
   };
 }
+
+export type Attachment = {
+  id: string;
+  name: string;
+  fileName: string;
+  url: string;
+  fileUrl: string;
+  path: string;
+  mimeType: string;
+  fileType: string;
+  content: string;
+};
