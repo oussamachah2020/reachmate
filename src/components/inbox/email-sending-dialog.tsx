@@ -1,8 +1,3 @@
-// Fixing issue: User can only select a template, not write emails
-// - Make RichTextEditor read-only to prevent direct editing
-// - Ensure content is set only from selectedTemplate
-// Fixing form submission to ensure proper recipient handling
-// - Ensure recipients and CC are correctly formatted for API
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -122,6 +117,12 @@ const EmailSendingDialog = () => {
     }
   }, [ccEmail, multipleCcRecipients, recipientMode, setValue]);
 
+  useEffect(() => {
+    if (!selectedTemplate.id) {
+      setContent(""); // Clear content when no template is selected
+    }
+  }, [selectedTemplate]);
+
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email.trim());
@@ -194,11 +195,6 @@ const EmailSendingDialog = () => {
         return;
       }
 
-      if (!selectedTemplate.id) {
-        toast.error("Please select a template.");
-        return;
-      }
-
       let recipients: string[] = [];
       let ccRecipients: string[] = [];
 
@@ -254,6 +250,26 @@ const EmailSendingDialog = () => {
         receiverIds.push(receiverId);
       }
 
+      let newTemplateId: string;
+
+      if (!selectedTemplate.id) {
+        const { data: createdTemplate, error: newTemplateError } =
+          await supabase
+            .from("template")
+            .insert({
+              subject: data.subject,
+              description: "",
+              body: content,
+              categoryId: data.categoryId,
+              tagId: data.tagId,
+              senderId: user?.id,
+            })
+            .select("id")
+            .single();
+
+        newTemplateId = createdTemplate?.id;
+      }
+
       const sendPromises = receiverIds.map(async (receiverId, index) => {
         const recipient = recipients[index];
         const res = await fetch("/api/send-email", {
@@ -261,9 +277,10 @@ const EmailSendingDialog = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             senderName: `${sender?.firstName} ${sender?.lastName}`,
+            from: user?.email,
             to: recipient,
             subject: data.subject,
-            html: selectedTemplate.content, // Use template content only
+            html: content,
             cc: ccRecipients.length > 0 ? ccRecipients : undefined,
             attachments,
           }),
@@ -277,7 +294,8 @@ const EmailSendingDialog = () => {
         const { error: emailError } = await supabase.from("email_sent").insert({
           categoryId: data.categoryId || null,
           tagId: data.tagId || null,
-          templateId: selectedTemplate.id,
+          message: content,
+          templateId: selectedTemplate.id || newTemplateId,
           senderId: user?.id,
           receiverId,
         });
@@ -674,9 +692,9 @@ const EmailSendingDialog = () => {
               <div className="space-y-3">
                 <Label>Message (Template)</Label>
                 <RichTextEditor
-                  value={selectedTemplate.content}
+                  value={content}
                   htmlContent={selectedTemplate.content}
-                  onChange={() => {}} // Disable direct editing
+                  onChange={setContent}
                 />
               </div>
 
@@ -716,11 +734,12 @@ const EmailSendingDialog = () => {
                         id: template.id,
                         content: template.content,
                       });
+                      setContent(template.content);
                     }}
                   />
                   <label
                     htmlFor="file-upload"
-                    className="cursor-pointer flex items-center text-muted-foreground hover:text-primary text-sm"
+                    className="cursor-pointer dark:text-white text-gray-500 flex items-center  AxIcon-foreground hover:text-primary text-sm"
                   >
                     <Paperclip className="h-4 w-4 mr-1" />
                     {uploading ? "Uploading..." : "Quick Upload"}

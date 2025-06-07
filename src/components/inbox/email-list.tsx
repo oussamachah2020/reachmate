@@ -382,8 +382,8 @@ export function EmailList({
 
                 {/* Preview Text */}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 leading-relaxed line-clamp-2">
-                  {email.template?.body
-                    ? truncateHtml(email.template.body, 140)
+                  {email.message
+                    ? truncateHtml(email.message, 140)
                     : "No preview available"}
                 </p>
 

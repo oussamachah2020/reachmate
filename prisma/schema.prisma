@@ -43,8 +43,8 @@ model EmailSent {
   sentAt     DateTime   @default(now())
   isRead     Boolean    @default(false)
   archived   Boolean    @default(false)
-  starred   Boolean    @default(false)
-
+  starred    Boolean    @default(false)
+  message    String?     
   categoryId String?    @db.Uuid 
   category   Category?  @relation(fields: [categoryId], references: [id])
 
@@ -77,7 +77,7 @@ model ScheduledEmail {
   sent         Boolean  @default(false)
   createdAt    DateTime @default(now())
 
-  @@map("scheduled_email") // Optional: if your database table is named exactly like this
+  @@map("scheduled_email")
 }
 
 

@@ -36,7 +36,7 @@ export default function InboxPage() {
       const { data: emails, error } = await supabase
         .from("email_sent")
         .select(
-          `id, sentAt, isRead, archived, starred,
+          `id, sentAt, isRead, archived, starred,message,
           category(id, name), 
           tag(id, name), 
           sender(id, firstName, lastName, email), 
@@ -118,7 +118,6 @@ export default function InboxPage() {
         );
         break;
       default:
-        // "all" - no additional filtering
         break;
     }
 
@@ -163,7 +162,7 @@ export default function InboxPage() {
             const { data, error } = await supabase
               .from("email_sent")
               .select(
-                `id, sentAt, isRead, archived, starred,
+                `id, sentAt, isRead, archived, starred,message,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 
@@ -202,7 +201,7 @@ export default function InboxPage() {
             const { data, error } = await supabase
               .from("email_sent")
               .select(
-                `id, sentAt, isRead, archived, starred,
+                `id, sentAt, isRead, archived, starred,message,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 
@@ -291,7 +290,7 @@ export default function InboxPage() {
             const { data, error } = await supabase
               .from("email_sent")
               .select(
-                `id, sentAt, isRead, archived, starred,
+                `id, sentAt, isRead, archived, starred, message,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 
@@ -330,7 +329,7 @@ export default function InboxPage() {
             const { data, error } = await supabase
               .from("email_sent")
               .select(
-                `id, sentAt, isRead, archived, starred,
+                `id, sentAt, isRead, archived, starred,message,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 

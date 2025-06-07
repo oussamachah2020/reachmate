@@ -264,7 +264,9 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
           {currentEmail.template?.body ? (
             <div
               className="leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: currentEmail.template.body }}
+              dangerouslySetInnerHTML={{
+                __html: currentEmail.message,
+              }}
             />
           ) : (
             <div className=" italic">No content available for this email.</div>

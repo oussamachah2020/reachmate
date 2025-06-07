@@ -4,7 +4,11 @@ const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { senderName, to, subject, html, cc, attachments } = await req.json();
+    const { senderName, from, to, subject, html, cc, attachments } =
+      await req.json();
+
+    console.log(html);
+
 
     const toArray = Array.isArray(to) ? to : [to].filter(Boolean);
 

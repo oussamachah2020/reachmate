@@ -3,6 +3,7 @@ export interface Email {
   sentAt: string;
   archived: boolean;
   starred: boolean;
+  message: string;
   isRead: boolean;
   attachment: {
     id: string;
