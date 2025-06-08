@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Mail, Lock, User, EyeOff, Eye } from "lucide-react";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,14 +31,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface SignUpFormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  gender: Gender;
-  terms: boolean;
-}
+const formSchema = z.object({
+  firstName: z
+    .string()
+    .min(1, { message: "First name is required" })
+    .min(2, { message: "First name must be at least 2 characters" }),
+  lastName: z
+    .string()
+    .min(1, { message: "Last name is required" })
+    .min(2, { message: "Last name must be at least 2 characters" }),
+  email: z
+    .string()
+    .min(1, { message: "Email is required" })
+    .email({ message: "Invalid email address" }),
+  password: z
+    .string()
+    .min(1, { message: "Password is required" })
+    .min(8, { message: "Password must be at least 8 characters" })
+    .regex(/^(?=.*[0-9])(?=.*[!@#$%^&*])/, {
+      message: "Password must contain a number and a special character",
+    }),
+  gender: z.nativeEnum(Gender, {
+    required_error: "Gender is required",
+    invalid_type_error: "Please select a valid gender",
+  }),
+  terms: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the terms and privacy policy",
+  }),
+});
+
+type SignUpFormData = z.infer<typeof formSchema>;
 
 export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -46,9 +70,10 @@ export default function SignUpPage() {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
-    setValue,
-  } = useForm<SignUpFormData>();
+    control,
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(formSchema),
+  });
 
   const onSubmit = async (data: SignUpFormData) => {
     setIsLoading(true);
@@ -63,7 +88,6 @@ export default function SignUpPage() {
       };
 
       await signUpUser(registrationData);
-      setIsLoading(false);
       toast.success("Account created successfully !");
     } catch (err) {
       console.error(err);
@@ -112,9 +136,7 @@ export default function SignUpPage() {
                       className={`pl-10 ${
                         errors.firstName ? "border-destructive" : ""
                       }`}
-                      {...register("firstName", {
-                        required: "First name is required",
-                      })}
+                      {...register("firstName")}
                     />
                   </div>
                   {errors.firstName && (
@@ -135,9 +157,7 @@ export default function SignUpPage() {
                     id="lastName"
                     placeholder="Doe"
                     className={errors.lastName ? "border-destructive" : ""}
-                    {...register("lastName", {
-                      required: "Last name is required",
-                    })}
+                    {...register("lastName")}
                   />
                   {errors.lastName && (
                     <p className="mt-1 text-xs text-destructive">
@@ -164,13 +184,7 @@ export default function SignUpPage() {
                     className={`pl-10 ${
                       errors.email ? "border-destructive" : ""
                     }`}
-                    {...register("email", {
-                      required: "Email is required",
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: "Invalid email address",
-                      },
-                    })}
+                    {...register("email")}
                   />
                 </div>
                 {errors.email && (
@@ -195,21 +209,10 @@ export default function SignUpPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="***********"
-                    className={`pl-10 ${
+                    className={`pl-10 pr-10 ${
                       errors.password ? "border-destructive" : ""
                     }`}
-                    {...register("password", {
-                      required: "Password is required",
-                      minLength: {
-                        value: 8,
-                        message: "Password must be at least 8 characters",
-                      },
-                      pattern: {
-                        value: /^(?=.*[0-9])(?=.*[!@#$%^&*])/,
-                        message:
-                          "Password must contain a number and a special character",
-                      },
-                    })}
+                    {...register("password")}
                   />
                   <button
                     type="button"
@@ -243,29 +246,33 @@ export default function SignUpPage() {
                 >
                   Gender
                 </Label>
-                <Select
-                  defaultValue={watch("gender")}
-                  onValueChange={(val) => {
-                    if (val === "male") {
-                      setValue("gender", Gender.MALE);
-                    } else {
-                      setValue("gender", Gender.FEMALE);
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    id="gender"
-                    className={`w-full ${
-                      errors.gender ? "border-destructive" : ""
-                    }`}
-                  >
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="gender"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={(val) => {
+                        field.onChange(
+                          val === "male" ? Gender.MALE : Gender.FEMALE
+                        );
+                      }}
+                    >
+                      <SelectTrigger
+                        id="gender"
+                        className={`w-full ${
+                          errors.gender ? "border-destructive" : ""
+                        }`}
+                      >
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.gender && (
                   <p className="mt-1 text-xs text-destructive">
                     {errors.gender.message}
@@ -273,40 +280,51 @@ export default function SignUpPage() {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="terms"
-                  {...register("terms", {
-                    required: "You must agree to the terms and privacy policy",
-                  })}
-                />
-                <label
-                  htmlFor="terms"
-                  className={`text-sm font-medium leading-none ${
-                    errors.terms ? "text-destructive" : ""
-                  }`}
-                >
-                  I agree to the{" "}
-                  <Link
-                    href="/terms"
-                    className="text-primary hover:text-primary/90"
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <Controller
+                    name="terms"
+                    control={control}
+                    rules={{
+                      required:
+                        "You must agree to the terms and privacy policy",
+                    }}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="terms"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    )}
+                  />
+                  <label
+                    htmlFor="terms"
+                    className={`text-sm font-medium leading-none ${
+                      errors.terms ? "text-destructive" : ""
+                    }`}
                   >
-                    terms of service
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    href="/privacy"
-                    className="text-primary hover:text-primary/90"
-                  >
-                    privacy policy
-                  </Link>
-                </label>
+                    I agree to the{" "}
+                    <Link
+                      href="/terms"
+                      className="text-primary hover:text-primary/90"
+                    >
+                      terms of service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      className="text-primary hover:text-primary/90"
+                    >
+                      privacy policy
+                    </Link>
+                  </label>
+                </div>
+                {errors.terms && (
+                  <p className="mt-1 text-xs text-destructive">
+                    {errors.terms.message}
+                  </p>
+                )}
               </div>
-              {errors.terms && (
-                <p className="mt-1 text-xs text-destructive">
-                  {errors.terms.message}
-                </p>
-              )}
 
               <Button
                 type="submit"

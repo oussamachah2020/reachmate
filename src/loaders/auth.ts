@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { LoginDto, RegisterDto } from "@/types/auth";
 import { useAuthStore } from "@/zustand/auth.store";
+import { Gender } from "@prisma/client";
 import { Session, User } from "@supabase/supabase-js";
 
 async function signUpUser(data: RegisterDto) {
@@ -24,7 +25,7 @@ async function signUpUser(data: RegisterDto) {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-      gender: data.gender,
+      gender: Gender.MALE,
     });
 
     return { user: signUpData?.user };

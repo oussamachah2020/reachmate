@@ -16,21 +16,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Logo from "@/../public/logo-2.svg";
-import WhiteLogo from "@/../public/logo-white.svg";
 import { signInUser } from "@/loaders/auth";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
+import { z } from "zod";
 
-interface SignInFormData {
-  email: string;
-  password: string;
-}
+const formSchema = z.object({
+  email: z
+    .string()
+    .min(1, { message: "email is required" })
+    .email({ message: "Insert a valid email" }),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters" }),
+});
+
+type SignInFormData = z.infer<typeof formSchema>;
 
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { theme } = useTheme();
 
   const {
     register,
