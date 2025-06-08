@@ -10,6 +10,7 @@ async function signUpUser(data: RegisterDto) {
       email: data.email,
       password: data.password,
       options: {
+        emailRedirectTo: "https://reachmate.xyz/confirmation",
         data: {
           username: `${data.firstName} ${data.lastName}`,
         },
