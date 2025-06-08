@@ -38,19 +38,13 @@ export default function ConfirmPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            ReachMate
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Professional email management solution
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight ">ReachMate</h1>
+          <p className="mt-2 text-sm">Professional email management solution</p>
         </div>
 
-        <Card className="border-gray-200 shadow-md">
+        <Card className="border-gray-200 shadow-none">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl text-gray-800">
-              Email Confirmation
-            </CardTitle>
+            <CardTitle className="text-xl ">Email Confirmation</CardTitle>
             <CardDescription>
               {status === "loading"
                 ? "Verifying your email address..."
@@ -58,10 +52,10 @@ export default function ConfirmPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-6">
-            {status === "loading" ? (
+            {status !== "loading" ? (
               <div className="flex flex-col items-center space-y-4">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-sm text-gray-500">
+                <p className="text-sm">
                   Please wait while we verify your email address...
                 </p>
               </div>
@@ -71,7 +65,7 @@ export default function ConfirmPage() {
                   <CheckCircle className="h-12 w-12 text-primary" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm ">
                     Your email has been verified successfully. Redirecting to
                     sign in...
                   </p>
