@@ -52,7 +52,7 @@ export default function ConfirmPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-6">
-            {status !== "loading" ? (
+            {status === "loading" ? (
               <div className="flex flex-col items-center space-y-4">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="text-sm">

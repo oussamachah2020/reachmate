@@ -8,7 +8,7 @@ export interface RegisterDto {
   lastName: string;
   email: string;
   password: string;
-  gender: Gender;
+  // gender: Gender;
 }
 
 export interface LoginDto {

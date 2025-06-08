@@ -18,8 +18,9 @@ import {
 } from "@/components/ui/card";
 import { signInUser } from "@/loaders/auth";
 import { toast } from "sonner";
-import { useTheme } from "next-themes";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase/client";
+import { LinkedInLogoIcon } from "@radix-ui/react-icons";
 
 const formSchema = z.object({
   email: z
@@ -59,6 +60,42 @@ export default function SignInPage() {
       setIsLoading(false);
     }
   };
+
+  const handleFacebookSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+      });
+
+      if (error) {
+        toast.error("Facebook sign-in failed");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred during Facebook sign-in");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  async function signInWithLinkedIn() {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "linkedin_oidc",
+      });
+
+      if (error) {
+        toast.error("linkedIn sign-in failed");
+        return;
+      }
+
+      console.log(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred during linkedIn sign-in");
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
@@ -176,6 +213,21 @@ export default function SignInPage() {
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
+            <div className="flex flex-col gap-3 py-2 my-3">
+              <div className="relative w-full text-center border-t my-3">
+                <span className="absolute left-1/2 -translate-x-1/2 -top-2 px-2  text-xs">
+                  Or continue with
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                onClick={signInWithLinkedIn}
+                disabled={isLoading}
+              >
+                <LinkedInLogoIcon className="h-4 w-4 text-blue-500 " />
+                Sign In with LinkedIn
+              </Button>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-center my-3">
             <p className="text-sm ">

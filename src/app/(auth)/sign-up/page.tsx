@@ -22,7 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { signUpUser } from "@/loaders/auth";
 import { Gender, RegisterDto } from "@/types/auth";
 import { toast } from "sonner";
-import Logo from "@/../public/logo-2.svg";
 import {
   Select,
   SelectContent,
@@ -51,10 +50,10 @@ const formSchema = z.object({
     .regex(/^(?=.*[0-9])(?=.*[!@#$%^&*])/, {
       message: "Password must contain a number and a special character",
     }),
-  gender: z.nativeEnum(Gender, {
-    required_error: "Gender is required",
-    invalid_type_error: "Please select a valid gender",
-  }),
+  // gender: z.nativeEnum(Gender, {
+  //   required_error: "Gender is required",
+  //   invalid_type_error: "Please select a valid gender",
+  // }),
   terms: z.boolean().refine((val) => val === true, {
     message: "You must agree to the terms and privacy policy",
   }),
@@ -84,7 +83,7 @@ export default function SignUpPage() {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-        gender: data.gender,
+        // gender: data.gender,
       };
 
       await signUpUser(registrationData);
@@ -239,7 +238,7 @@ export default function SignUpPage() {
                 )}
               </div>
 
-              <div className="space-y-1">
+              {/* <div className="space-y-1">
                 <Label
                   htmlFor="gender"
                   className={errors.gender ? "text-destructive" : ""}
@@ -267,8 +266,8 @@ export default function SignUpPage() {
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value={Gender.MALE}>Male</SelectItem>
+                        <SelectItem value={Gender.FEMALE}>Female</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -278,7 +277,7 @@ export default function SignUpPage() {
                     {errors.gender.message}
                   </p>
                 )}
-              </div>
+              </div> */}
 
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">
