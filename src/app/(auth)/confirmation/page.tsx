@@ -11,6 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { verifyEmail } from "@/loaders/auth";
+import { supabase } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { useAuthStore } from "@/zustand/auth.store";
 
 export default function ConfirmPage() {
   const router = useRouter();
@@ -22,17 +25,55 @@ export default function ConfirmPage() {
   const type = params.get("type");
 
   useEffect(() => {
-    async function confirmEmail() {
-      if (token && type) {
-        await verifyEmail(token, type);
+    const insertUser = async () => {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-        setStatus("success");
-        router.replace("/sign-in");
+      if (sessionError || !session?.user) {
+        toast.error("Failed to get session");
+        return;
       }
-    }
 
-    confirmEmail();
-  }, [router, token, type]);
+      const { user } = session;
+
+      const { error: insertError } = await supabase.from("sender").upsert({
+        id: user.id,
+        email: user.email,
+        firstName: user.user_metadata?.given_name || "FirstName",
+        lastName: user.user_metadata?.family_name || "LastName",
+        gender: "MALE",
+      });
+
+      if (insertError) {
+        console.error(insertError);
+        toast.error("Error inserting user data");
+        return;
+      }
+
+      useAuthStore.setState(() => ({ session: session }));
+      useAuthStore.setState(() => ({ user: user }));
+
+      toast.success("Welcome!");
+      router.push("/home"); // Redirect to home
+    };
+
+    insertUser();
+  }, [router]);
+
+  // useEffect(() => {
+  //   async function confirmEmail() {
+  //     if (token && type) {
+  //       await verifyEmail(token, type);
+
+  //       setStatus("success");
+  //       router.replace("/sign-in");
+  //     }
+  //   }
+
+  //   confirmEmail();
+  // }, [router, token, type]);
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">

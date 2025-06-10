@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { signInUser } from "@/loaders/auth";
+import { signInUser, signInWithLinkedIn } from "@/loaders/auth";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase/client";
@@ -78,24 +78,6 @@ export default function SignInPage() {
       setIsLoading(false);
     }
   };
-
-  async function signInWithLinkedIn() {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "linkedin_oidc",
-      });
-
-      if (error) {
-        toast.error("linkedIn sign-in failed");
-        return;
-      }
-
-      console.log(data);
-    } catch (err) {
-      console.error(err);
-      toast.error("An error occurred during linkedIn sign-in");
-    }
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">

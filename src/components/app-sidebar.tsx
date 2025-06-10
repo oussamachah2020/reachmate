@@ -6,6 +6,8 @@ import {
   Settings,
   History,
   TimerIcon,
+  GlassesIcon,
+  SparkleIcon,
 } from "lucide-react";
 
 import {
@@ -23,6 +25,7 @@ import { Separator } from "./ui/separator";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 
 // Menu items.
 const items = [
@@ -50,6 +53,11 @@ const items = [
     title: "Schedule",
     href: "/schedule",
     icon: TimerIcon,
+  },
+  {
+    title: "Smart Replies",
+    href: "/smart-replies",
+    icon: SparkleIcon,
   },
   {
     title: "History",

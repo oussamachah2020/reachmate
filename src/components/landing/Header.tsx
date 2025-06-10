@@ -33,7 +33,7 @@ export function Header() {
 
   return (
     <header
-      className={`fixed w-full z-50 bg-white dark:bg-gray-950 transition-all duration-300 ${
+      className={`fixed w-full z-50 glassmorphism transition-all duration-300 ${
         isScrolled ? "py-3 shadow-md" : "py-4"
       }`}
     >

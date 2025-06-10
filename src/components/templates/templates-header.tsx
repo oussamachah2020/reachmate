@@ -12,8 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CreateTemplateDialog } from "./create-template-dialog";
 import { useViewModeStore } from "@/zustand/global.store";
+import { useRouter } from "next/navigation";
 
 interface TemplatesHeaderProps {
   searchQuery: string;
@@ -34,6 +34,7 @@ export function TemplatesHeader({
 }: TemplatesHeaderProps) {
   const { viewMode, setViewMode } = useViewModeStore();
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const clearSearch = () => {
     setSearchQuery("");
@@ -54,7 +55,14 @@ export function TemplatesHeader({
             </Badge>
           )}
         </div>
-        <CreateTemplateDialog
+        <Button
+          onClick={() => router.push("/templates/new")}
+          className="bg-green-600 text-white hover:bg-green-700"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Create Template
+        </Button>
+        {/* <CreateTemplateDialog
           open={open}
           setOpen={setOpen}
           trigger={
@@ -65,8 +73,8 @@ export function TemplatesHeader({
               <Plus className="mr-2 h-4 w-4" />
               Create Template
             </Button>
-          }
-        />
+          } 
+        />*/}
       </div>
 
       <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0">

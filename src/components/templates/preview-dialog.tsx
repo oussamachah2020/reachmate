@@ -23,7 +23,7 @@ const PreviewDialog = ({
   return (
     <Dialog open={openPreview} onOpenChange={() => setOpenPreview(false)}>
       {children}
-      <DialogContent>
+      <DialogContent className="h-[50rem] overflow-auto">
         <DialogHeader>
           <DialogTitle>Template Preview</DialogTitle>
         </DialogHeader>

@@ -16,6 +16,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { ConfirmationAlert } from "../confirmation-alert";
 
 export function TemplateCategories() {
   const [categories, setCategories] = useState<
@@ -27,6 +28,7 @@ export function TemplateCategories() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingTags, setLoadingTags] = useState(true);
   const [newTagName, setNewTagName] = useState("");
+  const [tagDeleteAlertOpen, setTagDeleteAlertOpen] = useState(false);
   const { user } = useAuthStore();
 
   const handleDeleteCategory = async (id: string) => {
@@ -46,7 +48,6 @@ export function TemplateCategories() {
   };
 
   const handleDeleteTag = async (id: string) => {
-    console.log(id);
     try {
       const { error } = await supabase.from("tag").delete().eq("id", id);
       if (error) {
@@ -258,16 +259,23 @@ export function TemplateCategories() {
                   className="flex items-center rounded-full border  px-3 py-1 text-xs"
                 >
                   {tag.name}
-                  {/* <span className="ml-1 text-gray-500">({tag.count})</span> */}
-                  <Button
-                    onClick={() => handleDeleteTag(tag.id)}
-                    variant="ghost"
-                    size="icon"
-                    className="ml-1 h-5 w-5 rounded-full p-0 hover:bg-red-100 hover:text-red-600 transition-colors"
-                    aria-label={`Delete tag ${tag.name}`}
-                  >
-                    <X className="h-3 w-3 text-red-500" />
-                  </Button>
+                  <ConfirmationAlert
+                    isOpen={tagDeleteAlertOpen}
+                    setIsOpen={() => setTagDeleteAlertOpen(false)}
+                    action={() => handleDeleteTag(tag.id)}
+                    description="This action will remove the tag and templates related to it"
+                    trigger={
+                      <Button
+                        onClick={() => setTagDeleteAlertOpen(true)}
+                        variant="ghost"
+                        size="icon"
+                        className="ml-1 h-5 w-5 rounded-full p-0 hover:bg-red-100 hover:text-red-600 transition-colors"
+                        aria-label={`Delete tag ${tag.name}`}
+                      >
+                        <X className="h-3 w-3 text-red-500" />
+                      </Button>
+                    }
+                  />
                 </div>
               ))
             )}

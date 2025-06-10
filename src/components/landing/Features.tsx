@@ -76,10 +76,7 @@ export function Features() {
   };
 
   return (
-    <section
-      id="features"
-      className="container mx-auto px-4 py-20 md:py-28 bg-white dark:bg-gray-950"
-    >
+    <section id="features" className="container mx-auto px-4 py-20 md:py-28 ">
       <motion.div
         className="text-center space-y-4"
         initial={{ opacity: 0, y: 20 }}
@@ -106,7 +103,7 @@ export function Features() {
         {features.map((feature, index) => (
           <motion.div key={index} variants={item} className="relative">
             <motion.div
-              className="h-full bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300 hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-md dark:hover:bg-gray-800/50"
+              className="h-full  rounded-xl border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300 hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-md dark:hover:bg-gray-800/50"
               animate={{
                 y: hoveredIndex === index ? -5 : 0,
               }}

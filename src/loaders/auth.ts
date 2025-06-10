@@ -35,6 +35,32 @@ async function signUpUser(data: RegisterDto) {
   }
 }
 
+async function signInWithLinkedIn() {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "linkedin_oidc",
+      options: {
+        redirectTo: "http://localhost:3000/confirmation",
+      },
+    });
+
+    if (error) {
+      return {
+        success: false,
+        data: error.message,
+      };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error(err);
+    return {
+      success: false,
+      data: err,
+    };
+  }
+}
+
 async function verifyEmail(token: string, type: any) {
   try {
     const { data, error } = await supabase.auth.verifyOtp({
@@ -130,4 +156,5 @@ export {
   verifyEmail,
   requestPasswordResetEmail,
   updateUserPassword,
+  signInWithLinkedIn,
 };
