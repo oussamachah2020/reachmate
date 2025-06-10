@@ -46,7 +46,7 @@ export function Header() {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 md:px-6 glassmorphism">
       <div className="hidden md:block md:w-1/3 ">
         <div className="flex flex-row items-center gap-3 w-full">
           <SidebarTrigger />

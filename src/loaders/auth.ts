@@ -41,6 +41,7 @@ async function signInWithLinkedIn() {
       provider: "linkedin_oidc",
       options: {
         redirectTo: "https://reachmate.xyz/confirmation",
+        // redirectTo: "http://localhost:3000/confirmation",
       },
     });
 
