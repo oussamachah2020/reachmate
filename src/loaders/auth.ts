@@ -40,7 +40,7 @@ async function signInWithLinkedIn() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "linkedin_oidc",
       options: {
-        redirectTo: "http://localhost:3000/confirmation",
+        redirectTo: "httpS://reachmate.xyz/confirmation",
       },
     });
 
