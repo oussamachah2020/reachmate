@@ -96,7 +96,7 @@ export function Header() {
 
               <Link href={"/sign-in"}>
                 <Button size="sm" className="relative overflow-hidden">
-                  <span className="relative z-10 flex items-center">
+                  <span className="relative z-10 flex items-center text-white">
                     Get Started
                     <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
                   </span>
@@ -156,7 +156,7 @@ export function Header() {
 
               <Link href={"/sign-up"}>
                 <Button size="sm" className="w-full">
-                  <span className="flex items-center justify-center">
+                  <span className="flex items-center justify-center text-white">
                     Get Started
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                   </span>
