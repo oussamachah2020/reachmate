@@ -15,3 +15,8 @@ export interface LoginDto {
   email: string;
   password: string;
 }
+
+export enum PLAN {
+  FREE = "FREE",
+  PRO = "PRO",
+}

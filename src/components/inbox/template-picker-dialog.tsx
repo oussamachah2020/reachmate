@@ -82,7 +82,7 @@ export const TemplatePickerDialog = ({ onSelect }: Props) => {
         Import Template
       </Button>
 
-      <DialogContent className="max-w-7xl">
+      <DialogContent className="sm:max-w-4xl h-[50rem]">
         <DialogTitle>
           <div className="px-4 pb-3 border-b text-sm font-medium ">
             Select a template
@@ -116,7 +116,7 @@ export const TemplatePickerDialog = ({ onSelect }: Props) => {
               <h3 className="font-semibold text-sm text-muted-foreground mb-2">
                 Preview
               </h3>
-              <div className="border rounded-md p-4 bg-muted min-h-[200px] overflow-y-auto">
+              <div className="border rounded-md p-4 bg-muted h-[58%] overflow-y-auto">
                 {selectedTemplate ? (
                   <div
                     className="prose text-sm template-content"

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Send, Users, BarChart2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import clsx from "clsx";
+import { useAuthStore } from "@/zustand/auth.store";
 
 export function DashboardStats() {
   const [stats, setStats] = useState({
@@ -14,6 +15,7 @@ export function DashboardStats() {
     openRate: 0,
   });
   const [loading, setLoading] = useState(true);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     async function fetchStats() {
@@ -21,22 +23,26 @@ export function DashboardStats() {
 
       const { count: totalEmails } = await supabase
         .from("email_sent")
-        .select("id", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true })
+        .eq("senderId", user?.id);
 
       const { count: sentToday } = await supabase
         .from("email_sent")
         .select("id", { count: "exact", head: true })
         .gte("sentAt", `${today}T00:00:00`)
-        .lte("sentAt", `${today}T23:59:59`);
+        .lte("sentAt", `${today}T23:59:59`)
+        .eq("senderId", user?.id);
 
       const { count: activeContacts } = await supabase
         .from("receiver")
-        .select("id", { count: "exact", head: true });
+        .select("id", { count: "exact", head: true })
+        .eq("senderId", user?.id);
 
       const { count: readCount } = await supabase
         .from("email_sent")
         .select("id", { count: "exact", head: true })
-        .eq("isRead", true);
+        .eq("isRead", true)
+        .eq("senderId", user?.id);
 
       const openRate =
         totalEmails && readCount
@@ -82,7 +88,7 @@ export function DashboardStats() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {cards.map((card, index) => (
-        <Card key={index}>
+        <Card key={index} className="shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {card.icon}

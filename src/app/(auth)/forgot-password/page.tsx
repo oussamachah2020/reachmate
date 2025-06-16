@@ -17,7 +17,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Logo from "@/../public/logo-2.svg";
+import WhiteLogo from "@/../public/logo-white.svg";
 import { requestPasswordResetEmail } from "@/loaders/auth";
+import { useTheme } from "next-themes";
 
 interface ForgotPasswordFormData {
   email: string;
@@ -26,6 +28,7 @@ interface ForgotPasswordFormData {
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const { theme } = useTheme();
 
   const {
     register,
@@ -50,20 +53,18 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="flex justify-center items-center flex-col text-center">
           <img
-            src={Logo.src}
+            src={theme === "dark" ? WhiteLogo.src : Logo.src}
             alt="reachmate-logo"
             className="w-[50%] h-[50%]"
           />
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm ">
             Professional email management solution
           </p>
         </div>
 
         <Card className="border-gray-200 shadow-none">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl text-gray-800">
-              Forgot your password?
-            </CardTitle>
+            <CardTitle className="text-xl">Forgot your password?</CardTitle>
             <CardDescription>
               {isSubmitted
                 ? "Check your email for a reset link"
@@ -76,7 +77,7 @@ export default function ForgotPasswordPage() {
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                   <Mail className="h-6 w-6 text-primary" />
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm ">
                   We've sent a password reset link to your email address. Please
                   check your inbox.
                 </p>
@@ -99,7 +100,7 @@ export default function ForgotPasswordPage() {
                   </Label>
                   <div className="relative">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <Mail className="h-5 w-5 text-gray-400" />
+                      <Mail className="h-5 w-5 " />
                     </div>
                     <Input
                       id="email"

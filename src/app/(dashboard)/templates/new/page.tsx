@@ -273,7 +273,6 @@ export default function CreateTemplatePage() {
               <Button
                 variant="outline"
                 onClick={() => router.push("/templates")}
-                className="text-gray-800"
               >
                 <ChevronLeft className="mr-2 h-4 w-4" />
                 Back to Templates
@@ -622,11 +621,7 @@ export default function CreateTemplatePage() {
 
         {step === 2 && (
           <div className="mt-6 flex items-center justify-between">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              className="text-gray-800"
-            >
+            <Button variant="outline" onClick={prevStep}>
               <ChevronLeft className="mr-2 h-4 w-4" />
               Back to Basic Info
             </Button>

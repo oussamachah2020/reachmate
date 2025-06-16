@@ -6,7 +6,6 @@ import {
   Settings,
   History,
   TimerIcon,
-  GlassesIcon,
   SparkleIcon,
 } from "lucide-react";
 
@@ -19,13 +18,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import Logo from "@/../public/logo-2.svg";
-import WhiteLogo from "@/../public/logo-white.svg";
 import { Separator } from "./ui/separator";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 
 // Menu items.
 const items = [
@@ -54,11 +50,11 @@ const items = [
     href: "/schedule",
     icon: TimerIcon,
   },
-  {
-    title: "Smart Replies",
-    href: "/smart-replies",
-    icon: SparkleIcon,
-  },
+  // {
+  //   title: "Smart Replies",
+  //   href: "/smart-replies",
+  //   icon: SparkleIcon,
+  // },
   {
     title: "History",
     href: "/history",
@@ -83,7 +79,6 @@ const items = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { theme } = useTheme();
 
   return (
     <Sidebar>

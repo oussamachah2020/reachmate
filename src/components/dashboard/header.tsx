@@ -16,35 +16,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "../ui/sidebar";
 import { useAuthStore } from "@/zustand/auth.store";
 import { ModeToggle } from "../mode-toggle";
-import { supabase } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { PLAN } from "@/types/auth";
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const logout = useAuthStore.getState().clearAuth;
-  const { user } = useAuthStore();
-  const [name, setName] = useState("");
+  const { user, plan } = useAuthStore();
+  const router = useRouter();
 
-  useEffect(() => {
-    async function getSenderData() {
-      const { data, error } = await supabase
-        .from("sender")
-        .select("firstName, lastName")
-        .eq("id", user?.id);
-
-      if (error) {
-        toast.error("Failed to fetch data");
-        return;
-      }
-
-      const userData = data[0];
-
-      setName(`${userData.firstName} ${userData.lastName}`);
-    }
-
-    getSenderData();
-  }, [user]);
-
+  console.log({ user, plan });
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 md:px-6 glassmorphism">
       <div className="hidden md:block md:w-1/3 ">
@@ -79,7 +60,11 @@ export function Header() {
                   alt="User"
                 />
                 <AvatarFallback className="text-md bg-primary text-white">
-                  {name ? name?.charAt(0) : <User className="h-3 w-3" />}
+                  {user?.user_metadata ? (
+                    user?.user_metadata.displayName[0]
+                  ) : (
+                    <User className="h-3 w-3" />
+                  )}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -95,6 +80,17 @@ export function Header() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <span className="border border-gray-400 px-3 py-0.5 rounded-md text-sm">
+          {plan?.type}
+        </span>
+        {plan?.type === PLAN.FREE ? (
+          <Button
+            onClick={() => router.push("/upgrade")}
+            className="text-gray-200 h-7 bg-secondary"
+          >
+            Upgrade
+          </Button>
+        ) : null}
       </div>
     </header>
   );

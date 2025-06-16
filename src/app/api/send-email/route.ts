@@ -9,7 +9,6 @@ export async function POST(req: Request) {
 
     console.log(html);
 
-
     const toArray = Array.isArray(to) ? to : [to].filter(Boolean);
 
     const ccArray = cc

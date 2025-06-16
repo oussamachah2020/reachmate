@@ -1,18 +1,25 @@
 import { supabase } from "@/lib/supabase/client";
 import { LoginDto, RegisterDto } from "@/types/auth";
 import { useAuthStore } from "@/zustand/auth.store";
-import { Gender } from "@prisma/client";
 import { Session, User } from "@supabase/supabase-js";
+
+const url =
+  process.env.NODE_ENV === "development"
+    ? process.env.NEXT_PUBLIC_LOCAL_URL
+    : process.env.NEXT_PUBLIC_PROD_URL;
 
 async function signUpUser(data: RegisterDto) {
   try {
+    console.log({ url, firstName: data.firstName, lastName: data.lastName });
+
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo: "https://reachmate.xyz/confirmation",
+        emailRedirectTo: `${url}/confirmation`,
         data: {
           username: `${data.firstName} ${data.lastName}`,
+          displayName: `${data.firstName} ${data.lastName}`,
         },
       },
     });
@@ -26,7 +33,10 @@ async function signUpUser(data: RegisterDto) {
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-      gender: Gender.MALE,
+    });
+
+    await supabase.from("user_plan").insert({
+      userId: signUpData.user?.id,
     });
 
     return { user: signUpData?.user };
@@ -40,8 +50,7 @@ async function signInWithLinkedIn() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "linkedin_oidc",
       options: {
-        redirectTo: "https://reachmate.xyz/confirmation",
-        // redirectTo: "http://localhost:3000/confirmation",
+        redirectTo: `${url}/confirmation`,
       },
     });
 
@@ -99,8 +108,19 @@ async function signInUser(data: LoginDto) {
       return { success: false, data: error.message };
     }
 
+    const { data: plan, error: planError } = await supabase
+      .from("user_plan")
+      .select("id, type, startDate, endDate")
+      .eq("userId", signInData.user.id)
+      .single();
+
+    if (planError) {
+      return { success: false, data: planError.message };
+    }
+
     useAuthStore.setState(() => ({ session: signInData.session }));
     useAuthStore.setState(() => ({ user: signInData.user }));
+    useAuthStore.setState(() => ({ plan }));
 
     return {
       success: true,
@@ -114,7 +134,8 @@ async function signInUser(data: LoginDto) {
 async function requestPasswordResetEmail(email: string) {
   try {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://reachmate.xyz/reset-password",
+      // redirectTo: "https://reachmate.xyz/reset-password",
+      redirectTo: "http://localhost:3000/reset-password",
     });
 
     if (error) {

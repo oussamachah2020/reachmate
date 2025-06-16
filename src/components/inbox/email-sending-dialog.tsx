@@ -470,7 +470,7 @@ const EmailSendingDialog = () => {
           </Button>
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-4xl p-0 border-none dark:shadow-white/30 rounded-lg overflow-hidden">
+        <DialogContent className="sm:max-w-4xl h-[90%] overflow-auto p-0 border-none dark:shadow-white/30 rounded-lg">
           <div className="flex flex-col">
             <DialogTitle>
               <div className="px-4 py-3 border-b text-sm font-medium">
@@ -482,7 +482,6 @@ const EmailSendingDialog = () => {
               onSubmit={handleSubmit(onSubmit)}
               className="flex flex-col space-y-3 px-4 py-3"
             >
-              {/* Recipient Mode Toggle */}
               <div className="flex items-center gap-2 p-3 rounded-lg">
                 <Label className="text-sm font-medium">Send to:</Label>
                 <Button

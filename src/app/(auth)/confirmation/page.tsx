@@ -38,12 +38,13 @@ export default function ConfirmPage() {
 
       const { user } = session;
 
+      const fullName = user.user_metadata?.displayName;
+
       const { error: insertError } = await supabase.from("sender").upsert({
         id: user.id,
         email: user.email,
-        firstName: user.user_metadata?.given_name || "FirstName",
-        lastName: user.user_metadata?.family_name || "LastName",
-        gender: "MALE",
+        firstName: fullName.split(" ")[0],
+        lastName: fullName.split(" ")[1],
       });
 
       if (insertError) {

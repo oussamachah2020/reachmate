@@ -8,8 +8,6 @@ import {
 import ScheduledEmails from "./scheduled-emails";
 
 export function UpcomingScheduled() {
-
-
   return (
     <Card className="h-[20.8em] shadow-none relative overflow-hidden">
       <CardHeader>

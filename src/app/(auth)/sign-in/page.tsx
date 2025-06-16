@@ -19,7 +19,6 @@ import {
 import { signInUser, signInWithLinkedIn } from "@/loaders/auth";
 import { toast } from "sonner";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase/client";
 import { LinkedInLogoIcon } from "@radix-ui/react-icons";
 
 const formSchema = z.object({
@@ -56,24 +55,6 @@ export default function SignInPage() {
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong, try again !");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFacebookSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-      });
-
-      if (error) {
-        toast.error("Facebook sign-in failed");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("An error occurred during Facebook sign-in");
     } finally {
       setIsLoading(false);
     }

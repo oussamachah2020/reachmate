@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { signUpUser } from "@/loaders/auth";
-import { Gender, RegisterDto } from "@/types/auth";
+import { RegisterDto } from "@/types/auth";
 import { toast } from "sonner";
 import {
   Select,
@@ -83,7 +83,6 @@ export default function SignUpPage() {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-        // gender: data.gender,
       };
 
       await signUpUser(registrationData);
@@ -237,47 +236,6 @@ export default function SignUpPage() {
                   </p>
                 )}
               </div>
-
-              {/* <div className="space-y-1">
-                <Label
-                  htmlFor="gender"
-                  className={errors.gender ? "text-destructive" : ""}
-                >
-                  Gender
-                </Label>
-                <Controller
-                  name="gender"
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value}
-                      onValueChange={(val) => {
-                        field.onChange(
-                          val === "male" ? Gender.MALE : Gender.FEMALE
-                        );
-                      }}
-                    >
-                      <SelectTrigger
-                        id="gender"
-                        className={`w-full ${
-                          errors.gender ? "border-destructive" : ""
-                        }`}
-                      >
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={Gender.MALE}>Male</SelectItem>
-                        <SelectItem value={Gender.FEMALE}>Female</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.gender && (
-                  <p className="mt-1 text-xs text-destructive">
-                    {errors.gender.message}
-                  </p>
-                )}
-              </div> */}
 
               <div className="space-y-1">
                 <div className="flex items-center space-x-2">

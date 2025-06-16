@@ -1,13 +1,17 @@
 // app/api/claude/route.ts
+import { trackUsage } from "@/lib/usage";
+import { AuthenticatedRequest, withAuth } from "@/services/auth-middleware";
 import Anthropic from "@anthropic-ai/sdk";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-export async function POST(request: NextRequest) {
+async function handler(request: AuthenticatedRequest) {
   try {
+    console.log(request.userId, request.user);
+
     const { message, temperature = 0.7 } = await request.json();
 
     if (!message) {
@@ -28,6 +32,8 @@ export async function POST(request: NextRequest) {
         },
       ],
     });
+
+    await trackUsage(request.userId, "aiRequests");
 
     return NextResponse.json({
       response: (response.content[0] as { text: string }).text,
@@ -57,3 +63,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAuth(handler);

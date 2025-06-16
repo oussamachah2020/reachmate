@@ -15,7 +15,6 @@ model Sender {
   lastName  String
   email     String
   avatar    String?
-  gender    Gender  @default(MALE)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
   EmailSent EmailSent[]
@@ -24,6 +23,8 @@ model Sender {
   Tag       Tag[]
   Attachment Attachment[]
   ScheduledEmail ScheduledEmail[]
+  UserPlan UserPlan?
+  Usage Usage?
 
   @@map("sender")
 }
@@ -37,6 +38,32 @@ model Receiver {
 
   @@map("receiver")
 }
+
+
+model UserPlan {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  startDate DateTime @default(now())
+  endDate   DateTime @default(dbgenerated("NOW() + INTERVAL '30 days'"))
+  type      PLAN     @default(FREE)
+  
+  // Usage limits for the plan
+  maxAiRequests       Int    @default(10)    // Monthly AI requests limit
+  maxResendRequests   Int    @default(50)    // Monthly email send limit via Resend
+  maxEmailsSent       Int    @default(50)    // Total emails sent limit
+  maxContactsStored   Int    @default(100)   // Maximum contacts that can be stored
+  maxTemplatesStored  Int    @default(5)     // Maximum templates that can be saved
+  maxAttachmentsStored Int   @default(10)    // Maximum attachments that can be stored
+  maxStorageUsed      BigInt @default(104857600) // 100MB in bytes
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String    @db.Uuid @unique
+  user      Sender?    @relation(fields: [userId], references: [id])
+
+  @@map("user_plan")
+}
+
 
 model EmailSent {
   id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -60,9 +87,30 @@ model EmailSent {
   receiverId String     @db.Uuid
   receiver   Receiver   @relation(fields: [receiverId], references: [id])
 
-  attachments Attachment[] // Updated: One-to-many relation
+  attachments Attachment[]
 
   @@map("email_sent")
+}
+
+model Usage {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  aiRequests          Int      @default(0)
+  resendRequests      Int      @default(0)
+  emailsSent          Int      @default(0)
+  contactsStored      Int      @default(0)
+  templatesGenerated  Int      @default(0)
+  templatesSaved      Int      @default(0)
+  attachmentsStored   Int      @default(0)
+  totalStorageUsed    BigInt   @default(0)
+    
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  userId   String   @db.Uuid @unique
+  user     Sender   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("usage")
 }
 
 model ScheduledEmail {
@@ -153,10 +201,9 @@ model Tag {
   @@map("tag")
 }
 
-
-enum Gender {
-  MALE
-  FEMALE
+enum PLAN {
+  FREE
+  PRO
 }
 
 enum Priority {

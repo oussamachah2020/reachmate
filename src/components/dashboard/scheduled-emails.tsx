@@ -2,7 +2,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/zustand/auth.store";
 import { ScheduledEmail } from "@prisma/client";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Timer } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "../ui/badge";
@@ -19,7 +19,8 @@ const ScheduledEmails = (props: Props) => {
       try {
         const { data, error } = await supabase
           .from("scheduled_email")
-          .select("id, subject, toEmail, priority, scheduledAt, sent");
+          .select("id, subject, toEmail, priority, scheduledAt, sent")
+          .eq("senderId", user?.id);
 
         if (error) {
           toast.error(error.message);
@@ -35,26 +36,34 @@ const ScheduledEmails = (props: Props) => {
 
     fetchScheduledEmails();
   }, [user]);
+
   return (
     <div className="space-y-4 h-[13rem] overflow-auto">
-      {scheduledEmails.map((email) => (
-        <div key={email.id} className="flex items-start space-x-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-            <CalendarClock className="h-5 w-5 text-primary" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-medium">{email.subject}</h4>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {email.toEmail}
-              </Badge>
-              <span className="text-xs text-gray-500">
-                {format(new Date(email.scheduledAt), "Pp")}
-              </span>
+      {scheduledEmails.length === 0 ? (
+        <div className="flex h-full gap-3 justify-center items-center flex-col">
+          <Timer className="h-12 w-12" />
+          <h2>No scheduled emails</h2>
+        </div>
+      ) : (
+        scheduledEmails.map((email) => (
+          <div key={email.id} className="flex items-start space-x-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+              <CalendarClock className="h-5 w-5 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-medium">{email.subject}</h4>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {email.toEmail}
+                </Badge>
+                <span className="text-xs text-gray-500">
+                  {format(new Date(email.scheduledAt), "Pp")}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))
+      )}
     </div>
   );
 };

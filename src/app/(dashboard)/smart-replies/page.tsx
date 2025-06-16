@@ -2,19 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
   MessageSquare,
   Sparkles,
   Copy,
@@ -199,262 +186,244 @@ The response should be ready to send with minimal editing needed.`;
   };
 
   return (
-    <div className="min-h-screen">
-      <div>
-        {/* Header */}
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
+      <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-green-500 text-white dark:bg-green-600 rounded-full">
+            <div className="p-3 bg-primary text-primary-foreground rounded-full shadow-lg">
               <Zap className="w-8 h-8" />
             </div>
-            <h1 className="text-4xl font-bold ">AI Email Template Generator</h1>
+            <h1 className="text-4xl font-bold text-foreground">
+              AI Email Template Generator
+            </h1>
           </div>
-          <p className="text-lg  max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Simply paste any job description or message, and get a professional
             email template instantly
           </p>
         </div>
 
-        {/* Success/Error Alerts */}
         {showSuccess && (
-          <Alert className="mb-6 border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-700">
-              Email template copied to clipboard successfully!
-            </AlertDescription>
-          </Alert>
+          <div className="mb-6 p-4 border border-primary/20 bg-primary/5 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              <span className="text-primary font-medium">
+                Email template copied to clipboard successfully!
+              </span>
+            </div>
+          </div>
         )}
 
         {error && (
-          <Alert className="mb-6 border-red-200 bg-red-50">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-700">
-              {error}
-            </AlertDescription>
-          </Alert>
+          <div className="mb-6 p-4 border border-destructive/20 bg-destructive/5 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <span className="text-destructive font-medium">{error}</span>
+            </div>
+          </div>
         )}
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Input Section */}
-          <Card className="border-green-200 dark:border-green-800 dark:bg-gray-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400">
+          {/* Input Card */}
+          <div className="bg-card border border-border rounded-lg shadow-sm">
+            <div className="p-6 border-b border-border">
+              <h3 className="flex items-center gap-2 text-xl font-semibold text-primary mb-2">
                 <MessageSquare className="w-5 h-5" />
                 Input Details
-              </CardTitle>
-              <CardDescription className="dark:text-gray-400">
+              </h3>
+              <p className="text-muted-foreground">
                 Enter the message details and your preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Message Type Selection */}
+              </p>
+            </div>
+            <div className="p-6 space-y-6">
               <div>
-                <Label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-foreground">
                   Response Type
-                </Label>
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   {messageTypes.map((type) => (
-                    <Button
+                    <button
                       key={type.value}
-                      variant={
-                        messageType === type.value ? "default" : "outline"
-                      }
-                      size="sm"
                       onClick={() => setMessageType(type.value)}
-                      className={
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         messageType === type.value
-                          ? "bg-green-600 hover:bg-green-700"
-                          : "hover:bg-green-50"
-                      }
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      }`}
                     >
                       <span className="mr-2">{type.icon}</span>
                       {type.label}
-                    </Button>
+                    </button>
                   ))}
                 </div>
               </div>
 
-              {/* Original Message */}
               <div>
-                <Label htmlFor="originalMessage">
+                <label className="text-sm font-medium text-foreground block mb-2">
                   Job Description / Message to Respond To
-                </Label>
-                <Textarea
-                  id="originalMessage"
+                </label>
+                <textarea
                   placeholder="Paste the job description, recruiter message, or any text you want to create a response template for..."
                   value={originalMessage}
                   onChange={(e) => setOriginalMessage(e.target.value)}
-                  className="min-h-[200px] mt-2"
+                  className="w-full min-h-[200px] p-3 bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent resize-none cursor-auto"
                 />
               </div>
 
-              {/* Context Information */}
               <div>
-                <Label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-foreground">
                   Personal Context (Optional)
-                </Label>
+                </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="name" className="text-xs text-gray-600">
+                    <label className="text-xs text-muted-foreground mb-1 block">
                       Your Name
-                    </Label>
-                    <Input
-                      id="name"
+                    </label>
+                    <input
                       placeholder="Your name"
                       value={context.name}
                       onChange={(e) =>
                         setContext({ ...context, name: e.target.value })
                       }
+                      className="w-full p-2 bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="role" className="text-xs text-gray-600">
+                    <label className="text-xs text-muted-foreground mb-1 block">
                       Current Role
-                    </Label>
-                    <Input
-                      id="role"
+                    </label>
+                    <input
                       placeholder="Your title/role"
                       value={context.role}
                       onChange={(e) =>
                         setContext({ ...context, role: e.target.value })
                       }
+                      className="w-full p-2 bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="company" className="text-xs text-gray-600">
+                    <label className="text-xs text-muted-foreground mb-1 block">
                       Target Company
-                    </Label>
-                    <Input
-                      id="company"
+                    </label>
+                    <input
                       placeholder="Company name"
                       value={context.company}
                       onChange={(e) =>
                         setContext({ ...context, company: e.target.value })
                       }
+                      className="w-full p-2 bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <Label
-                      htmlFor="experience"
-                      className="text-xs text-gray-600"
-                    >
+                    <label className="text-xs text-muted-foreground mb-1 block">
                       Years of Experience
-                    </Label>
-                    <Input
-                      id="experience"
+                    </label>
+                    <input
                       placeholder="e.g., 5"
                       value={context.experience}
                       onChange={(e) =>
                         setContext({ ...context, experience: e.target.value })
                       }
+                      className="w-full p-2 bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Tone Selection */}
               <div>
-                <Label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-foreground">
                   Email Tone
-                </Label>
+                </label>
                 <div className="flex flex-wrap gap-2">
                   {tones.map((toneOption) => (
-                    <Badge
+                    <button
                       key={toneOption.value}
-                      variant={
-                        tone === toneOption.value ? "default" : "outline"
-                      }
-                      className={`cursor-pointer px-3 py-1 ${
-                        tone === toneOption.value
-                          ? "bg-green-600 hover:bg-green-700"
-                          : "hover:bg-green-50"
-                      }`}
                       onClick={() => setTone(toneOption.value)}
+                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                        tone === toneOption.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
                     >
                       {toneOption.label}
-                    </Badge>
+                    </button>
                   ))}
                 </div>
               </div>
 
-              {/* Generate Button */}
-              <Button
+              <button
                 onClick={generateResponse}
                 disabled={isLoading || !originalMessage.trim()}
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
-                size="lg"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 px-4 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Generating Email Template...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Sparkles className="w-4 h-4" />
                     Generate Email Template
                   </>
                 )}
-              </Button>
+              </button>
 
-              {/* Quick Examples */}
               <div>
-                <Label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-foreground">
                   Try These Examples
-                </Label>
+                </label>
                 <div className="space-y-2">
                   {Object.entries({
                     "job-posting": "💼 Job Posting Response",
                     "recruiter-email": "📧 Recruiter Email Reply",
                     networking: "🤝 Networking Message",
                   }).map(([key, title]) => (
-                    <Button
+                    <button
                       key={key}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => loadExample(key as unknown as number)}
-                      className="w-full justify-start text-left hover:bg-green-50"
+                      onClick={() => loadExample(key as any)}
+                      className="w-full p-3 text-left bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
                     >
-                      <div>
-                        <div className="font-medium">{title}</div>
-                        <div className="text-xs text-gray-500 truncate">
-                          Click to load example content
-                        </div>
+                      <div className="font-medium text-secondary-foreground">
+                        {title}
                       </div>
-                    </Button>
+                      <div className="text-xs text-muted-foreground">
+                        Click to load example content
+                      </div>
+                    </button>
                   ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Output Section */}
-          <Card className="border-green-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-700">
+          {/* Output Card */}
+          <div className="bg-card border border-border rounded-lg shadow-sm">
+            <div className="p-6 border-b border-border">
+              <h3 className="flex items-center gap-2 text-xl font-semibold text-primary mb-2">
                 <Mail className="w-5 h-5" />
                 Generated Email Template
-              </CardTitle>
-              <CardDescription>
+              </h3>
+              <p className="text-muted-foreground">
                 Your professional, ready-to-send email template
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[400px] mb-4 border">
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="bg-muted rounded-lg p-4 min-h-[400px] mb-4 border border-border">
                 {generatedResponse ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 mb-3">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-700">
+                      <CheckCircle className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">
                         Template Generated Successfully
                       </span>
                     </div>
-                    <pre className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800 font-sans">
+                    <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-mono">
                       {generatedResponse}
                     </pre>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[350px] text-gray-500 text-center">
+                  <div className="flex items-center justify-center h-[350px] text-muted-foreground text-center">
                     <div>
                       <Mail className="w-16 h-16 mx-auto mb-4 opacity-30" />
                       <p className="text-lg font-medium mb-2">
@@ -469,41 +438,34 @@ The response should be ready to send with minimal editing needed.`;
                 )}
               </div>
 
-              {/* Action Buttons */}
               {generatedResponse && (
                 <div className="flex flex-wrap gap-2">
-                  <Button
+                  <button
                     onClick={copyToClipboard}
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-green-50 border-green-200"
+                    className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-md text-sm font-medium transition-colors flex items-center gap-2"
                   >
-                    <Copy className="w-4 h-4 mr-2" />
+                    <Copy className="w-4 h-4" />
                     Copy Template
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     onClick={generateResponse}
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-green-50 border-green-200"
                     disabled={isLoading}
+                    className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
                   >
-                    <RefreshCw className="w-4 h-4 mr-2" />
+                    <RefreshCw className="w-4 h-4" />
                     Regenerate
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     onClick={downloadResponse}
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-green-50 border-green-200"
+                    className="px-3 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-md text-sm font-medium transition-colors flex items-center gap-2"
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="w-4 h-4" />
                     Download
-                  </Button>
+                  </button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
