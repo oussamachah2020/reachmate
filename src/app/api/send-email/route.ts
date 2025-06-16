@@ -7,7 +7,6 @@ export async function POST(req: Request) {
     const { senderName, from, to, subject, html, cc, attachments } =
       await req.json();
 
-    console.log(html);
 
     const toArray = Array.isArray(to) ? to : [to].filter(Boolean);
 
@@ -24,12 +23,15 @@ export async function POST(req: Request) {
       );
     }
 
+    const emailWithoutDomain = from.split("@")[0];
+
     const result = await resend.emails.send({
-      from: `${senderName} <onboarding@reachmate.xyz>`,
+      from: `${senderName} <${emailWithoutDomain}@reachmate.xyz>`,
       to: toArray,
       subject,
       html,
       cc: ccArray,
+      replyTo: from,
       attachments: attachments?.map((file: any) => ({
         filename: file.name || file.fileName,
         content: Buffer.from(file.content, "base64"),
