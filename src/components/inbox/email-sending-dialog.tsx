@@ -122,7 +122,7 @@ const EmailSendingDialog = () => {
       cc: "",
       categoryId: "",
       tagId: "",
-      replyTo: "",
+      replyTo: user?.email,
     },
   });
 
@@ -590,7 +590,7 @@ const EmailSendingDialog = () => {
                       Reply To (optional)
                     </Label>
                     <Input
-                      placeholder="Add reply-to email"
+                      placeholder="Add reply-to email (the email address to receive the reply)"
                       {...register("replyTo")}
                     />
                     {errors.replyTo && (
