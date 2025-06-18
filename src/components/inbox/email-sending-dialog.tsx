@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +20,7 @@ import {
   XIcon,
   Users,
   User,
+  LoaderCircle,
 } from "lucide-react";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import { TemplatePickerDialog } from "./template-picker-dialog";
@@ -37,14 +40,36 @@ import AttachmentsDialog from "./attachments-dialog";
 import { Separator } from "../ui/separator";
 import { Attachment } from "@/types/inbox";
 
-type FormValues = {
-  to: string;
-  toMultiple?: string;
-  subject: string;
-  cc?: string;
-  categoryId: string;
-  tagId: string;
-};
+// Define Zod schema for form validation
+const emailSchema = z.string().email("Invalid email address").trim();
+const multipleEmailSchema = z.string().refine(
+  (value) => {
+    if (!value) return false;
+    const emails = value.split(";").map((email) => email.trim());
+    return emails.every((email) => emailSchema.safeParse(email).success);
+  },
+  { message: "All email addresses must be valid" }
+);
+
+const formSchema = z
+  .object({
+    to: z.string().optional(),
+    toMultiple: z.string().optional(),
+    subject: z.string().min(1, "Subject is required"),
+    cc: z.string().optional(),
+    categoryId: z.string().min(1, "Category is required"),
+    tagId: z.string().min(1, "Tag is required"),
+    replyTo: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.to || data.toMultiple) return true;
+      return false;
+    },
+    { message: "At least one recipient is required", path: ["to"] }
+  );
+
+type FormValues = z.infer<typeof formSchema>;
 
 type EmailOption = {
   value: string;
@@ -65,21 +90,20 @@ const EmailSendingDialog = () => {
   const [tags, setTags] = useState<
     { id: string; name: string; count: number }[]
   >([]);
-
   const [recipientError, setRecipientError] = useState("");
   const [recipientMode, setRecipientMode] = useState<"single" | "multiple">(
     "single"
   );
-
   const [toEmail, setToEmail] = useState<EmailOption | null>(null);
   const [ccEmail, setCcEmail] = useState<EmailOption | null>(null);
-
   const [multipleRecipients, setMultipleRecipients] = useState<string[]>([]);
   const [multipleCcRecipients, setMultipleCcRecipients] = useState<string[]>(
     []
   );
   const [currentToInput, setCurrentToInput] = useState("");
   const [currentCcInput, setCurrentCcInput] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const { user, sender } = useAuthStore();
 
@@ -89,43 +113,45 @@ const EmailSendingDialog = () => {
     setValue,
     reset,
     formState: { errors },
-  } = useForm<FormValues>();
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      to: "",
+      toMultiple: "",
+      subject: "",
+      cc: "",
+      categoryId: "",
+      tagId: "",
+      replyTo: "",
+    },
+  });
 
   useEffect(() => {
     if (recipientMode === "single") {
-      if (toEmail) {
-        setValue("to", toEmail.value);
-      } else {
-        setValue("to", "");
-      }
+      setValue("to", toEmail?.value || "");
+      setValue("toMultiple", "");
     } else {
-      const emailString = multipleRecipients.join(";");
-      setValue("toMultiple", emailString);
+      setValue("toMultiple", multipleRecipients.join(";"));
+      setValue("to", "");
     }
   }, [toEmail, multipleRecipients, recipientMode, setValue]);
 
   useEffect(() => {
     if (recipientMode === "single") {
-      if (ccEmail) {
-        setValue("cc", ccEmail.value);
-      } else {
-        setValue("cc", "");
-      }
+      setValue("cc", ccEmail?.value || "");
     } else {
-      const ccEmailString = multipleCcRecipients.join(";");
-      setValue("cc", ccEmailString);
+      setValue("cc", multipleCcRecipients.join(";"));
     }
   }, [ccEmail, multipleCcRecipients, recipientMode, setValue]);
 
   useEffect(() => {
     if (!selectedTemplate.id) {
-      setContent(""); // Clear content when no template is selected
+      setContent("");
     }
   }, [selectedTemplate]);
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
+    return emailSchema.safeParse(email).success;
   };
 
   const addToRecipient = (email: string) => {
@@ -140,7 +166,7 @@ const EmailSendingDialog = () => {
       setRecipientError("");
     } else if (multipleRecipients.includes(trimmedEmail)) {
       toast.error("Email already added");
-    } else if (!validateEmail(trimmedEmail)) {
+    } else {
       toast.error("Please enter a valid email address");
     }
   };
@@ -162,7 +188,7 @@ const EmailSendingDialog = () => {
       setCurrentCcInput("");
     } else if (multipleCcRecipients.includes(trimmedEmail)) {
       toast.error("Email already added to CC");
-    } else if (!validateEmail(trimmedEmail)) {
+    } else {
       toast.error("Please enter a valid email address");
     }
   };
@@ -188,6 +214,7 @@ const EmailSendingDialog = () => {
   };
 
   const onSubmit = async (data: FormValues) => {
+    setLoading(true);
     try {
       const senderId = user?.id;
       if (!senderId) {
@@ -260,6 +287,7 @@ const EmailSendingDialog = () => {
               subject: data.subject,
               description: "",
               body: content,
+              replyTo: data.replyTo,
               categoryId: data.categoryId,
               tagId: data.tagId,
               senderId: user?.id,
@@ -267,6 +295,9 @@ const EmailSendingDialog = () => {
             .select("id")
             .single();
 
+        if (newTemplateError) {
+          throw new Error("Failed to create template");
+        }
         newTemplateId = createdTemplate?.id;
       }
 
@@ -279,6 +310,7 @@ const EmailSendingDialog = () => {
             senderName: `${sender?.firstName} ${sender?.lastName}`,
             from: user?.email,
             to: recipient,
+            replyTo: data.replyTo,
             subject: data.subject,
             html: content,
             cc: ccRecipients.length > 0 ? ccRecipients : undefined,
@@ -370,9 +402,12 @@ const EmailSendingDialog = () => {
       setContent("");
       setSelectedTemplate({ id: "", content: "" });
       setAttachments([]);
+      setIsOpen(false);
     } catch (err) {
       console.error("Error sending/saving email:", err);
       toast.error("Something went wrong.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -462,7 +497,7 @@ const EmailSendingDialog = () => {
 
   return (
     <div>
-      <Dialog>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button className="bg-primary text-white">
             <PlusIcon className="h-5 w-5" />
@@ -519,11 +554,14 @@ const EmailSendingDialog = () => {
                     <Label className="text-sm font-medium mb-2 block">To</Label>
                     <ReceiverEmailSelect
                       value={toEmail}
-                      onChange={setToEmail}
+                      onChange={(option) => {
+                        setToEmail(option);
+                        setValue("to", option?.value || "");
+                      }}
                     />
                     {errors.to && (
                       <span className="text-red-500 text-xs">
-                        Recipient is required
+                        {errors.to.message}
                       </span>
                     )}
                   </div>
@@ -535,8 +573,31 @@ const EmailSendingDialog = () => {
                     <ReceiverEmailSelect
                       placeholder="Add CC recipient"
                       value={ccEmail}
-                      onChange={setCcEmail}
+                      onChange={(option) => {
+                        setCcEmail(option);
+                        setValue("cc", option?.value || "");
+                      }}
                     />
+                    {errors.cc && (
+                      <span className="text-red-500 text-xs">
+                        {errors.cc.message}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">
+                      Reply To (optional)
+                    </Label>
+                    <Input
+                      placeholder="Add reply-to email"
+                      {...register("replyTo")}
+                    />
+                    {errors.replyTo && (
+                      <span className="text-red-500 text-xs">
+                        {errors.replyTo.message}
+                      </span>
+                    )}
                   </div>
                 </>
               ) : (
@@ -583,6 +644,11 @@ const EmailSendingDialog = () => {
                         {recipientError}
                       </span>
                     )}
+                    {errors.toMultiple && (
+                      <span className="text-red-500 text-xs">
+                        {errors.toMultiple.message}
+                      </span>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -624,6 +690,11 @@ const EmailSendingDialog = () => {
                         />
                       </div>
                     </div>
+                    {errors.cc && (
+                      <span className="text-red-500 text-xs">
+                        {errors.cc.message}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
@@ -635,7 +706,7 @@ const EmailSendingDialog = () => {
                   id="subject"
                   placeholder="Subject"
                   className="text-sm"
-                  {...register("subject", { required: "Subject is required" })}
+                  {...register("subject")}
                 />
                 {errors.subject && (
                   <span className="text-red-500 text-xs">
@@ -661,7 +732,7 @@ const EmailSendingDialog = () => {
                   </Select>
                   {errors.categoryId && (
                     <span className="text-red-500 text-xs">
-                      Category is required
+                      {errors.categoryId.message}
                     </span>
                   )}
                 </div>
@@ -682,7 +753,7 @@ const EmailSendingDialog = () => {
                   </Select>
                   {errors.tagId && (
                     <span className="text-red-500 text-xs">
-                      Tag is required
+                      {errors.tagId.message}
                     </span>
                   )}
                 </div>
@@ -738,7 +809,7 @@ const EmailSendingDialog = () => {
                   />
                   <label
                     htmlFor="file-upload"
-                    className="cursor-pointer dark:text-white text-gray-500 flex items-center  AxIcon-foreground hover:text-primary text-sm"
+                    className="cursor-pointer dark:text-white text-gray-500 flex items-center hover:text-primary text-sm"
                   >
                     <Paperclip className="h-4 w-4 mr-1" />
                     {uploading ? "Uploading..." : "Quick Upload"}
@@ -758,14 +829,20 @@ const EmailSendingDialog = () => {
                 </div>
 
                 <Button type="submit" className="bg-primary text-white">
-                  <Send className="h-4 w-4 mr-1" />
-                  Send
-                  {recipientMode === "multiple" &&
-                    multipleRecipients.length > 0 && (
-                      <span className="ml-1 text-xs bg-white/20 rounded px-1">
-                        {multipleRecipients.length}
-                      </span>
-                    )}
+                  {loading ? (
+                    <LoaderCircle className="animate-spin h-5 w-5" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-1" />
+                      Send
+                      {recipientMode === "multiple" &&
+                        multipleRecipients.length > 0 && (
+                          <span className="ml-1 text-xs bg-white/20 rounded px-1">
+                            {multipleRecipients.length}
+                          </span>
+                        )}
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

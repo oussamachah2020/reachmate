@@ -4,7 +4,7 @@ const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { senderName, from, to, subject, html, cc, attachments } =
+    const { senderName, from, replyTo, to, subject, html, cc, attachments } =
       await req.json();
 
 
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       subject,
       html,
       cc: ccArray,
-      replyTo: from,
+      replyTo,
       attachments: attachments?.map((file: any) => ({
         filename: file.name || file.fileName,
         content: Buffer.from(file.content, "base64"),
