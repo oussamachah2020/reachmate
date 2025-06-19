@@ -1,40 +1,31 @@
-export interface Email {
+// types/inbox.ts - Update your Email interface
+// types/inbox.ts
+export type Email = {
   id: string;
   sentAt: string;
+  isRead: boolean;
   archived: boolean;
   starred: boolean;
-  message: string;
-  isRead: boolean;
+  message: string | null;
+  resend_email_id: string | null; // Add this
+  email_status: string | null; // Add this
+  delivered_at: string;
+  opened_at: string;
+  clicked_at: string;
+  bounced_at: string;
+  complained_at: string;
+  category: { id: string; name: string } | null;
+  tag: { id: string; name: string } | null;
+  template: { id: string; body: string; subject: string } | null;
+  sender: { id: string; firstName: string; lastName: string; email: string };
+  receiver: { id: string; email: string };
   attachment: {
     id: string;
     fileUrl: string;
     fileName: string;
     fileType: string;
   }[];
-  category: {
-    id: string;
-    name: string;
-  };
-  tag: {
-    id: string;
-    name: string;
-  };
-  receiver: {
-    id: string;
-    email: string;
-  };
-  sender: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  template: {
-    id: string;
-    body: string;
-    subject: string;
-  };
-}
+};
 
 export type Attachment = {
   id: string;

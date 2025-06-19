@@ -87,6 +87,16 @@ model EmailSent {
   receiverId String     @db.Uuid
   receiver   Receiver   @relation(fields: [receiverId], references: [id])
 
+  // Add a field to store the Resend email ID
+  resend_email_id String? @unique @map("resend_email_id") // Crucial for linking
+  email_status    String? @map("email_status") // e.g., 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'complained'
+
+  delivered_at DateTime @default(now())
+  opened_at DateTime @default(now())
+  clicked_at DateTime @default(now())
+  bounced_at DateTime @default(now())
+  complained_at DateTime @default(now())
+
   attachments Attachment[]
 
   @@map("email_sent")

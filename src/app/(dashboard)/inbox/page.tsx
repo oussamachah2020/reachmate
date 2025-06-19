@@ -21,14 +21,13 @@ import type {
 export default function InboxPage() {
   const [activeEmail, setActiveEmail] = useState<string | null>(null);
   const [emailList, setEmailList] = useState<Email[]>([]);
-  const [allEmails, setAllEmails] = useState<Email[]>([]); // Store all emails for filtering
+  const [allEmails, setAllEmails] = useState<Email[]>([]);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const { user } = useAuthStore();
 
-  // Fetch initial emails
   const fetchEmails = async () => {
     if (!user?.id) return;
 
@@ -36,7 +35,9 @@ export default function InboxPage() {
       const { data: emails, error } = await supabase
         .from("email_sent")
         .select(
-          `id, sentAt, isRead, archived, starred,message,
+          `id, sentAt, isRead, archived, starred, message,
+          resend_email_id, email_status, delivered_at, opened_at, 
+          clicked_at, bounced_at, complained_at,
           category(id, name), 
           tag(id, name), 
           sender(id, firstName, lastName, email), 
@@ -62,11 +63,9 @@ export default function InboxPage() {
     }
   };
 
-  // Filter and search emails
   const filteredEmails = useMemo(() => {
     let filtered = [...allEmails];
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -78,11 +77,11 @@ export default function InboxPage() {
             .includes(query) ||
           email.sender.email.toLowerCase().includes(query) ||
           email.category?.name?.toLowerCase().includes(query) ||
-          email.tag?.name?.toLowerCase().includes(query)
+          email.tag?.name?.toLowerCase().includes(query) ||
+          email.email_status?.toLowerCase().includes(query)
       );
     }
 
-    // Apply status filters
     switch (activeFilter) {
       case "unread":
         filtered = filtered.filter((email) => !email.isRead);
@@ -97,6 +96,20 @@ export default function InboxPage() {
         filtered = filtered.filter(
           (email) => email.attachment && email.attachment.length > 0
         );
+        break;
+      case "opened":
+        filtered = filtered.filter(
+          (email) =>
+            email.email_status === "opened" || email.email_status === "clicked"
+        );
+        break;
+      case "delivered":
+        filtered = filtered.filter(
+          (email) => email.email_status === "delivered"
+        );
+        break;
+      case "bounced":
+        filtered = filtered.filter((email) => email.email_status === "bounced");
         break;
       case "today":
         const today = new Date();
@@ -162,7 +175,9 @@ export default function InboxPage() {
             const { data, error } = await supabase
               .from("email_sent")
               .select(
-                `id, sentAt, isRead, archived, starred,message,
+                `id, sentAt, isRead, archived, starred, message,
+                resend_email_id, email_status, delivered_at, opened_at, 
+                clicked_at, bounced_at, complained_at,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 
@@ -201,7 +216,9 @@ export default function InboxPage() {
             const { data, error } = await supabase
               .from("email_sent")
               .select(
-                `id, sentAt, isRead, archived, starred,message,
+                `id, sentAt, isRead, archived, starred, message,
+                resend_email_id, email_status, delivered_at, opened_at, 
+                clicked_at, bounced_at, complained_at,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 
@@ -228,6 +245,26 @@ export default function InboxPage() {
                 email.id === payload.new.id ? (data as unknown as Email) : email
               )
             );
+
+            if (
+              payload.new.email_status &&
+              (payload.old as any).email_status !== payload.new.email_status
+            ) {
+              const statusMessages = {
+                delivered: "📨 Email delivered",
+                opened: "👁️ Email opened",
+                clicked: "🖱️ Email clicked",
+                bounced: "⚠️ Email bounced",
+                complained: "❌ Email complained",
+              };
+              const message =
+                statusMessages[
+                  payload.new.email_status as keyof typeof statusMessages
+                ];
+              if (message) {
+                toast.info(message);
+              }
+            }
           } catch (error) {
             console.error("Error handling email update:", error);
           }
@@ -271,7 +308,6 @@ export default function InboxPage() {
     };
   }, [user?.id, activeEmail]);
 
-  // Real-time subscriptions for received emails
   useEffect(() => {
     if (!user?.id) return;
 
@@ -291,6 +327,8 @@ export default function InboxPage() {
               .from("email_sent")
               .select(
                 `id, sentAt, isRead, archived, starred, message,
+                email_status, delivered_at, opened_at, 
+                clicked_at, bounced_at, complained_at,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 
@@ -329,7 +367,9 @@ export default function InboxPage() {
             const { data, error } = await supabase
               .from("email_sent")
               .select(
-                `id, sentAt, isRead, archived, starred,message,
+                `id, sentAt, isRead, archived, starred, message,
+                resend_email_id, email_status, delivered_at, opened_at, 
+                clicked_at, bounced_at, complained_at,
                 category(id, name), 
                 tag(id, name), 
                 sender(id, firstName, lastName, email), 
@@ -410,6 +450,11 @@ export default function InboxPage() {
           <EmailPreview activeEmail={activeEmail} emailList={emailList} />
         </ResizablePanel>
       </ResizablePanelGroup>
+      {!isConnected && (
+        <div className="absolute bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-md">
+          Realtime connection lost. Attempting to reconnect...
+        </div>
+      )}
     </div>
   );
 }

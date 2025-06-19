@@ -32,7 +32,6 @@ export function EmailList({
 }: EmailListProps) {
   const [starredEmails, setStarredEmails] = useState<Set<string>>(new Set());
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const { user } = useAuthStore();
 
   // Initialize starred emails from the email list
   useEffect(() => {
@@ -361,6 +360,27 @@ export function EmailList({
                   <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
                     {email.attachment && email.attachment.length > 0 && (
                       <Paperclip className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                    )}
+                    {email.email_status && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs",
+                          email.email_status === "delivered" &&
+                            "border-blue-200 text-blue-600 bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:bg-blue-900",
+                          email.email_status === "opened" &&
+                            "border-purple-200 text-purple-600 bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:bg-purple-900",
+                          email.email_status === "clicked" &&
+                            "border-indigo-200 text-indigo-600 bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:bg-indigo-900",
+                          email.email_status === "bounced" &&
+                            "border-red-200 text-red-600 bg-red-50 dark:border-red-700 dark:text-red-400 dark:bg-red-900",
+                          email.email_status === "complained" &&
+                            "border-orange-200 text-orange-600 bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:bg-orange-900"
+                        )}
+                      >
+                        {email.email_status.charAt(0).toUpperCase() +
+                          email.email_status.slice(1)}
+                      </Badge>
                     )}
                     <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
                       {formatDate(email.sentAt)}

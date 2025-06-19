@@ -265,7 +265,7 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
             <div
               className="leading-relaxed"
               dangerouslySetInnerHTML={{
-                __html: currentEmail.message,
+                __html: currentEmail?.message || "",
               }}
             />
           ) : (

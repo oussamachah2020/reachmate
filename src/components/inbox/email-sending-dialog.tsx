@@ -329,7 +329,14 @@ const EmailSendingDialog = () => {
           message: content,
           templateId: selectedTemplate.id || newTemplateId,
           senderId: user?.id,
+          resend_email_id: result.id,
           receiverId,
+          sentAt: new Date().toISOString(),
+          delivered_at: new Date().toISOString(),
+          opened_at: new Date().toISOString(),
+          clicked_at: new Date().toISOString(),
+          bounced_at: new Date().toISOString(),
+          complained_at: new Date().toISOString(),
         });
 
         if (emailError) {

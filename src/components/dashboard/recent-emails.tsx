@@ -235,11 +235,11 @@ export function RecentEmails() {
                         : "text-muted-foreground"
                     }`}
                   >
-                    {email.template.subject}
+                    {email?.template?.subject}
                   </p>
 
                   <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {getPlainTextPreview(email.template.body)}
+                    {getPlainTextPreview(email?.template?.body || "")}
                   </p>
 
                   {/* Tags and category */}

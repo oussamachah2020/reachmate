@@ -7,7 +7,6 @@ export async function POST(req: Request) {
     const { senderName, from, replyTo, to, subject, html, cc, attachments } =
       await req.json();
 
-
     const toArray = Array.isArray(to) ? to : [to].filter(Boolean);
 
     const ccArray = cc
@@ -47,7 +46,22 @@ export async function POST(req: Request) {
       );
     }
 
-    return new Response(JSON.stringify({ success: true, result }), {
+    // Correct way to get the ID
+    const resendEmailId = result.data?.id;
+
+    // Ensure the ID exists before returning
+    if (!resendEmailId) {
+      console.error("Resend API did not return an email ID.");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Email sent, but no ID returned from Resend.",
+        }),
+        { status: 500 }
+      );
+    }
+
+    return new Response(JSON.stringify({ success: true, id: resendEmailId }), {
       status: 200,
     });
   } catch (error) {
