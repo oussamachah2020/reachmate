@@ -23,7 +23,6 @@ export default function InboxPage() {
   const [emailList, setEmailList] = useState<Email[]>([]);
   const [allEmails, setAllEmails] = useState<Email[]>([]);
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
-  const [isConnected, setIsConnected] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const { user } = useAuthStore();
@@ -300,7 +299,6 @@ export default function InboxPage() {
       )
       .subscribe((status) => {
         console.log("Inbox subscription status:", status);
-        setIsConnected(status === "SUBSCRIBED");
       });
 
     return () => {
@@ -450,11 +448,6 @@ export default function InboxPage() {
           <EmailPreview activeEmail={activeEmail} emailList={emailList} />
         </ResizablePanel>
       </ResizablePanelGroup>
-      {!isConnected && (
-        <div className="absolute bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-md">
-          Realtime connection lost. Attempting to reconnect...
-        </div>
-      )}
     </div>
   );
 }
