@@ -7,6 +7,7 @@ import { PLAN } from "@/types/auth";
 type Sender = {
   firstName: string;
   lastName: string;
+  email: string;
 };
 
 type Plan = {

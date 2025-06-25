@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,15 +13,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, Sparkles, Loader2, Save, Eye, Edit3 } from "lucide-react";
-import RichTextEditor from "@/components/ui/rich-text-editor";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  ChevronLeft,
+  Save,
+  Type,
+  ImageIcon,
+  Link,
+  Video,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Eye,
+  Settings,
+  Layout,
+  FileText,
+  Plus,
+  Grid3X3,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Info,
+  FolderOpen,
+  AlignLeft,
+  MousePointer,
+  Layers,
+} from "lucide-react";
 import { useAuthStore } from "@/zustand/auth.store";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { useTemplateStore } from "@/zustand/template.store";
-import { templatePrompts, templateVariables } from "@/constants";
 import { useRouter } from "next/navigation";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 
 type FormValues = {
   templateName: string;
@@ -31,29 +56,66 @@ type FormValues = {
   content: string;
 };
 
+type Category = {
+  id: string;
+  name: string;
+  count: number;
+};
+
+type Tag = {
+  id: string;
+  name: string;
+  count: number;
+};
+
+type EmailBlock = {
+  id: string;
+  type: "text" | "image" | "link" | "video" | "spacer";
+  content: any;
+  styles: {
+    textAlign?: "left" | "center" | "right";
+    fontSize?: string;
+    fontWeight?: "normal" | "bold";
+    fontStyle?: "normal" | "italic";
+    textDecoration?: "none" | "underline";
+    color?: string;
+    backgroundColor?: string;
+    padding?: string;
+    margin?: string;
+  };
+};
+
+const blockTypes = [
+  { type: "text", icon: Type, label: "Text", description: "Add text content" },
+  {
+    type: "image",
+    icon: ImageIcon,
+    label: "Image",
+    description: "Insert image",
+  },
+  { type: "link", icon: Link, label: "Link", description: "Add hyperlink" },
+  { type: "video", icon: Video, label: "Video", description: "Embed video" },
+  { type: "spacer", icon: Layout, label: "Spacer", description: "Add spacing" },
+];
+
 export default function CreateTemplatePage() {
   const [step, setStep] = useState(1);
-  const [activeTab, setActiveTab] = useState("edit");
-  const [selectedPrompt, setSelectedPrompt] = useState("");
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [emailBlocks, setEmailBlocks] = useState<EmailBlock[]>([]);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<
+    "desktop" | "tablet" | "mobile"
+  >("desktop");
   const router = useRouter();
 
   const { user } = useAuthStore();
-  const [categories, setCategories] = useState<
-    { id: string; name: string; count: number }[]
-  >([]);
-  const [tags, setTags] = useState<
-    { id: string; name: string; count: number }[]
-  >([]);
-
   const { selectedTemplate } = useTemplateStore();
 
   const {
     register,
     handleSubmit,
     control,
-    watch,
     reset,
     setValue,
     formState: { errors, isValid },
@@ -68,86 +130,125 @@ export default function CreateTemplatePage() {
     },
   });
 
-  const watchedContent = watch("content");
+  // Generate HTML from email blocks
+  const generateEmailHTML = () => {
+    const html = emailBlocks
+      .map((block) => {
+        const styles = {
+          textAlign: block.styles.textAlign || "left",
+          fontSize: block.styles.fontSize || "16px",
+          fontWeight: block.styles.fontWeight || "normal",
+          fontStyle: block.styles.fontStyle || "normal",
+          textDecoration: block.styles.textDecoration || "none",
+          color: block.styles.color,
+          backgroundColor: block.styles.backgroundColor || "transparent",
+          padding: block.styles.padding || "10px",
+          margin: block.styles.margin || "0",
+        };
 
-  // Generate template with Claude API
-  const generateTemplate = async () => {
-    setIsGenerating(true);
+        const styleStr = Object.entries(styles)
+          .map(
+            ([key, value]) =>
+              `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value}`
+          )
+          .join("; ");
 
-    try {
-      const promptToUse =
-        selectedPrompt === "Custom Request"
-          ? customPrompt
-          : templatePrompts.find((p) => p.name === selectedPrompt)?.prompt ||
-            "";
+        switch (block.type) {
+          case "text":
+            return `<div style="${styleStr}">${block.content.html || "<p>Enter text here...</p>"}</div>`;
+          case "image":
+            return `<div style="${styleStr}"><img src="${block.content.src || "/placeholder.svg?height=200&width=400"}" alt="${block.content.alt || ""}" style="max-width: 100%; margin: auto; height: auto;" /></div>`;
+          case "link":
+            return `<div style="${styleStr}"><a href="${block.content.url || "#"}" style="color: inherit; text-decoration: inherit;">${block.content.text || "Link"}</a></div>`;
+          case "video":
+            return `<div style="${styleStr}"><a href="${block.content.url || "#"}" style="color: inherit;">📹 ${block.content.title || "Video Link"}</a></div>`;
+          case "spacer":
+            return `<div style="height: ${block.content.height || "20px"};"></div>`;
+          default:
+            return "";
+        }
+      })
+      .join("\n");
 
-      if (!promptToUse.trim()) {
-        toast.error("Please provide a description for your template");
-        setIsGenerating(false);
-        return;
-      }
+    setValue("content", html);
+    return html;
+  };
 
-      const enhancedPrompt = `${promptToUse}
+  // Update content when blocks change
+  useEffect(() => {
+    generateEmailHTML();
+  }, [emailBlocks, setValue]);
 
-      Requirements:
-      - Generate PLAIN TEXT HTML only - no CSS styling, colors, backgrounds, or containers
-      - Use only basic HTML tags: <p>, <h1>, <h2>, <h3>, <strong>, <em>, <br>, <ul>, <li>, <ol>
-      - NO inline styles, NO CSS classes, NO div containers, NO borders, NO background colors
-      - Include template variables like [First Name], [Company], [Email] where appropriate
-      - Make it professional and business-appropriate
-      - Include proper email structure (greeting, body, closing)
-      - Keep it clean and simple with just basic HTML formatting
-      - Use line breaks (<br>) and paragraphs (<p>) for spacing
-      - NO decorative elements, boxes, or visual styling
+  const addBlock = (type: EmailBlock["type"]) => {
+    const newBlock: EmailBlock = {
+      id: `block-${Date.now()}`,
+      type,
+      content: getDefaultContent(type),
+      styles: {
+        textAlign: "left",
+        fontSize: "16px",
+        fontWeight: "normal",
+        fontStyle: "normal",
+        textDecoration: "none",
+        backgroundColor: "transparent",
+        padding: "16px 0",
+        margin: "0 0 16px 0",
+      },
+    };
+    setEmailBlocks([...emailBlocks, newBlock]);
+    setSelectedBlockId(newBlock.id);
+  };
 
-      Generate only the plain HTML content for the email body with basic formatting tags only.`;
-
-      const response = await fetch("/api/claude", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: enhancedPrompt,
-          temperature: 0.7,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate template");
-      }
-
-      const data = await response.json();
-
-      // Clean up the response to ensure it's just HTML
-      let generatedContent = data.response.trim();
-
-      // Remove any markdown code blocks if present
-      generatedContent = generatedContent
-        .replace(/```html\n?/g, "")
-        .replace(/```\n?/g, "");
-
-      // Remove any inline styles or CSS classes that might have been added
-      generatedContent = generatedContent
-        .replace(/style="[^"]*"/g, "")
-        .replace(/class="[^"]*"/g, "")
-        .replace(/<div[^>]*>/g, "")
-        .replace(/<\/div>/g, "");
-
-      // Set the content in the form
-      setValue("content", generatedContent, { shouldValidate: true });
-
-      // Show success message
-      toast.success(
-        "✨ Plain text template generated successfully! You can now edit or preview it."
-      );
-    } catch (error) {
-      console.error("Error generating template:", error);
-      toast.error("Failed to generate template. Please try again.");
-    } finally {
-      setIsGenerating(false);
+  const getDefaultContent = (type: EmailBlock["type"]) => {
+    switch (type) {
+      case "text":
+        return { html: "<p>Enter your text here...</p>" };
+      case "image":
+        return { src: "", alt: "Image description" };
+      case "link":
+        return { text: "Link text", url: "https://example.com" };
+      case "video":
+        return { title: "Video title", url: "https://youtube.com/watch?v=" };
+      case "spacer":
+        return { height: "20px" };
+      default:
+        return {};
     }
   };
+
+  const updateBlock = (blockId: string, updates: Partial<EmailBlock>) => {
+    setEmailBlocks((blocks) =>
+      blocks.map((block) =>
+        block.id === blockId ? { ...block, ...updates } : block
+      )
+    );
+  };
+
+  const deleteBlock = (blockId: string) => {
+    setEmailBlocks((blocks) => blocks.filter((block) => block.id !== blockId));
+    if (selectedBlockId === blockId) {
+      setSelectedBlockId(null);
+    }
+  };
+
+  const moveBlock = (blockId: string, direction: "up" | "down") => {
+    const currentIndex = emailBlocks.findIndex((block) => block.id === blockId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= emailBlocks.length) return;
+
+    const newBlocks = [...emailBlocks];
+    [newBlocks[currentIndex], newBlocks[newIndex]] = [
+      newBlocks[newIndex],
+      newBlocks[currentIndex],
+    ];
+    setEmailBlocks(newBlocks);
+  };
+
+  const selectedBlock = emailBlocks.find(
+    (block) => block.id === selectedBlockId
+  );
 
   const onSubmit = async (data: FormValues) => {
     try {
@@ -205,426 +306,737 @@ export default function CreateTemplatePage() {
 
   const prevStep = () => setStep(1);
 
-  React.useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("category")
-          .select("id, name");
-
-        if (error) {
-          console.error("Error fetching categories:", error);
-          return;
-        }
-
-        const categoriesWithCount = data.map((category) => ({
-          ...category,
-          count: 0,
-        }));
-
-        setCategories([...categoriesWithCount]);
-      } catch (error) {
-        console.error(error);
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("category")
+        .select("id, name");
+      if (error) {
+        console.error("Error fetching categories:", error);
+        return;
       }
-    };
+      const categoriesWithCount = data.map((category) => ({
+        ...category,
+        count: 0,
+      }));
+      setCategories(categoriesWithCount);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
-    const fetchTags = async () => {
-      try {
-        const { data, error } = await supabase.from("tag").select("id, name");
-
-        if (error) {
-          console.error("Error fetching tags:", error);
-          return;
-        }
-
-        const tagsWithCount = data.map((tag) => ({
-          ...tag,
-          count: 0,
-        }));
-
-        setTags(tagsWithCount);
-      } catch (error) {
-        console.error(error);
+  const fetchTags = async () => {
+    try {
+      const { data, error } = await supabase.from("tag").select("id, name");
+      if (error) {
+        console.error("Error fetching tags:", error);
+        return;
       }
-    };
+      const tagsWithCount = data.map((tag) => ({
+        ...tag,
+        count: 0,
+      }));
+      setTags(tagsWithCount);
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchCategories();
     fetchTags();
   }, [user]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedTemplate) {
       reset({
-        tagId: selectedTemplate.tag?.id,
-        categoryId: selectedTemplate.category?.id,
-        templateName: selectedTemplate.subject,
-        content: selectedTemplate.body,
+        tagId: selectedTemplate.tag?.id || "",
+        categoryId: selectedTemplate.category?.id || "",
+        templateName: selectedTemplate.subject || "",
+        content: selectedTemplate.body || "",
         description: selectedTemplate?.description || "",
       });
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate, reset]);
+
+  const getPreviewWidth = () => {
+    switch (previewDevice) {
+      case "mobile":
+        return "max-w-sm";
+      case "tablet":
+        return "max-w-md";
+      default:
+        return "max-w-full";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto p-4 lg:p-6">
+        {/* Enhanced Header with Better Positioning */}
+        <div className="mb-6 lg:mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-center space-x-4">
               <Button
                 variant="outline"
                 onClick={() => router.push("/templates")}
+                className="shrink-0"
               >
                 <ChevronLeft className="mr-2 h-4 w-4" />
-                Back to Templates
+                <span className="hidden sm:inline">Back to Templates</span>
+                <span className="sm:hidden">Back</span>
               </Button>
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  {selectedTemplate?.id
-                    ? "Edit Template"
-                    : "Create New Template"}
-                </h1>
-                <p className="text-muted-foreground mt-1">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="p-2 bg-primary/10 rounded-lg shrink-0">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <h1 className="text-2xl lg:text-3xl font-bold tracking-tight truncate">
+                    {selectedTemplate?.id
+                      ? "Edit Template"
+                      : "Create New Template"}
+                  </h1>
+                </div>
+                <p className="text-muted-foreground text-sm lg:text-base">
                   {step === 1
                     ? "Enter basic template information"
-                    : "Create your plain text template content"}
+                    : "Build your email template"}
                 </p>
               </div>
             </div>
 
-            {step === 2 && (
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="outline"
-                  className="text-gray-800"
-                  onClick={() =>
-                    setActiveTab(activeTab === "edit" ? "preview" : "edit")
-                  }
-                >
-                  {activeTab === "edit" ? (
-                    <>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Preview
-                    </>
-                  ) : (
-                    <>
-                      <Edit3 className="mr-2 h-4 w-4" />
-                      Edit
-                    </>
-                  )}
-                </Button>
+            {/* Step Indicator - Responsive */}
+            <div className="flex items-center justify-between lg:justify-end gap-4">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 lg:gap-2">
+                  <div
+                    className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-medium transition-colors ${
+                      step >= 1
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Info className="h-3 w-3 lg:h-4 lg:w-4" />
+                  </div>
+                  <div
+                    className={`w-8 lg:w-12 h-0.5 transition-colors ${step >= 2 ? "bg-primary" : "bg-muted"}`}
+                  />
+                  <div
+                    className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-medium transition-colors ${
+                      step >= 2
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Grid3X3 className="h-3 w-3 lg:h-4 lg:w-4" />
+                  </div>
+                </div>
+              </div>
+
+              {step === 2 && (
                 <Button
                   onClick={handleSubmit(onSubmit)}
-                  disabled={!watchedContent?.trim()}
-                  className="text-white"
+                  disabled={emailBlocks.length === 0}
+                  className="shrink-0"
                 >
                   <Save className="mr-2 h-4 w-4" />
-                  {selectedTemplate?.id ? "Update Template" : "Save Template"}
+                  <span className="hidden sm:inline">
+                    {selectedTemplate?.id ? "Update Template" : "Save Template"}
+                  </span>
+                  <span className="sm:hidden">Save</span>
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
-        {step === 1 ? (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-card rounded-xl border p-8">
-              <form className="space-y-6" onSubmit={handleSubmit(nextStep)}>
-                <div className="space-y-2">
-                  <Label htmlFor="templateName" className="text-sm font-medium">
-                    Template Name*
-                  </Label>
-                  <Input
-                    id="templateName"
-                    placeholder="e.g., Client Welcome Email"
-                    {...register("templateName", {
-                      required: "Template name is required",
-                    })}
-                    className="h-12"
-                  />
-                  {errors.templateName && (
-                    <p className="text-destructive text-sm">
-                      {errors.templateName.message}
+        {/* Step 1: Enhanced Basic Information with Better Responsive Layout */}
+        {step === 1 && (
+          <div className="max-w-4xl mx-auto">
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-blue-50 rounded-lg shrink-0">
+                    <FileText className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-xl lg:text-2xl">
+                      Template Information
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Provide basic details about your email template
                     </p>
-                  )}
+                  </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              </CardHeader>
+              <CardContent>
+                <form
+                  className="space-y-6 lg:space-y-8"
+                  onSubmit={handleSubmit(nextStep)}
+                >
                   <div className="space-y-2">
-                    <Label htmlFor="categoryId" className="text-sm font-medium">
-                      Category*
-                    </Label>
-                    <Controller
-                      name="categoryId"
-                      control={control}
-                      rules={{ required: "Category is required" }}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <SelectTrigger className="h-12 w-full">
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.categoryId && (
-                      <p className="text-destructive text-sm">
-                        {errors.categoryId.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tagId" className="text-sm font-medium">
-                      Tag
-                    </Label>
-                    <Controller
-                      name="tagId"
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <SelectTrigger className="h-12 w-full">
-                            <SelectValue placeholder="Select a tag" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {tags.map((tag) => (
-                              <SelectItem key={tag.id} value={tag.id}>
-                                {tag.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-medium">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Brief description of this template"
-                    {...register("description")}
-                    rows={3}
-                    className="resize-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between pt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push("/templates")}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!isValid}
-                    className="px-8 text-white"
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 h-[calc(100vh-200px)]">
-            <div className="bg-card rounded-xl border p-6 flex flex-col">
-              <div className="relative flex-1">
-                {isGenerating && (
-                  <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
-                    <div className="text-center space-y-3">
-                      <div className="relative">
-                        <Sparkles className="h-8 w-8 text-primary animate-pulse mx-auto" />
-                        <div className="absolute inset-0 h-8 w-8 border-2 border-primary/30 rounded-full animate-spin border-t-primary mx-auto"></div>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">
-                          Generating your plain text template...
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Creating clean, simple content without styling
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="h-full flex flex-col">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg">
-                        AI Plain Text Template Generator
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Generate clean, simple email templates without styling
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-5 flex-1">
-                    <div className="space-y-2">
-                      <Label className="font-medium">Template Type</Label>
-                      <Select
-                        value={selectedPrompt}
-                        onValueChange={setSelectedPrompt}
-                        disabled={isGenerating}
-                      >
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Choose a template type..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {templatePrompts.map((prompt) => (
-                            <SelectItem
-                              key={prompt.name}
-                              value={prompt.name}
-                              className="py-3"
-                            >
-                              <div className="space-y-1">
-                                <div className="font-medium">{prompt.name}</div>
-                                <div className="text-sm text-muted-foreground leading-tight">
-                                  {prompt.description}
-                                </div>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {selectedPrompt === "Custom Request" && (
-                      <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                        <Label className="font-medium">
-                          Custom Requirements
-                        </Label>
-                        <Textarea
-                          value={customPrompt}
-                          onChange={(e) => setCustomPrompt(e.target.value)}
-                          placeholder="Describe your email template needs in detail..."
-                          rows={6}
-                          disabled={isGenerating}
-                          className="resize-none"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Be specific about the purpose, tone, and any special
-                          requirements. Template will be generated as plain text
-                          without styling.
-                        </p>
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={generateTemplate}
-                      disabled={
-                        !selectedPrompt ||
-                        isGenerating ||
-                        (selectedPrompt === "Custom Request" &&
-                          !customPrompt.trim())
-                      }
-                      className="w-full h-12 text-white"
+                    <Label
+                      htmlFor="templateName"
+                      className="text-sm font-medium flex items-center gap-2"
                     >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating Plain Text Template...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Generate Plain Text Template
-                        </>
+                      <Type className="h-4 w-4" />
+                      Template Name*
+                    </Label>
+                    <Input
+                      id="templateName"
+                      placeholder="e.g., Client Welcome Email"
+                      {...register("templateName", {
+                        required: "Template name is required",
+                      })}
+                      className="h-11 lg:h-12"
+                    />
+                    {errors.templateName && (
+                      <p className="text-destructive text-sm">
+                        {errors.templateName.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="categoryId"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                        Category*
+                      </Label>
+                      <Controller
+                        name="categoryId"
+                        control={control}
+                        rules={{ required: "Category is required" }}
+                        render={({ field }) => (
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <SelectTrigger className="h-11 lg:h-12">
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  <div className="flex items-center gap-2">
+                                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                                    {cat.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.categoryId && (
+                        <p className="text-destructive text-sm">
+                          {errors.categoryId.message}
+                        </p>
                       )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="tagId"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                        Tag
+                      </Label>
+                      <Controller
+                        name="tagId"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <SelectTrigger className="h-11 lg:h-12">
+                              <SelectValue placeholder="Select a tag" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tags.map((tag) => (
+                                <SelectItem key={tag.id} value={tag.id}>
+                                  <div className="flex items-center gap-2">
+                                    <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                                    {tag.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="description"
+                      className="text-sm font-medium flex items-center gap-2"
+                    >
+                      <AlignLeft className="h-4 w-4" />
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Brief description of this template"
+                      {...register("description")}
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push("/templates")}
+                      className="w-full sm:w-auto order-2 sm:order-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={!isValid}
+                      className="w-full sm:w-auto order-1 sm:order-2"
+                    >
+                      Continue
+                      <ChevronLeft className="ml-2 h-4 w-4 rotate-180" />
                     </Button>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-card rounded-xl border p-6 flex flex-col">
-              <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
-                className="h-full flex flex-col"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="edit">
-                    <Edit3 className="mr-2 h-4 w-4" />
-                    Edit
-                  </TabsTrigger>
-                  <TabsTrigger value="preview">
-                    <Eye className="mr-2 h-4 w-4" />
-                    Preview
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="edit" className="flex-1 min-h-0">
-                  <Controller
-                    name="content"
-                    control={control}
-                    rules={{
-                      required: "Content cannot be empty",
-                      validate: (value) =>
-                        value.trim() !== "" ? true : "Content cannot be empty",
-                    }}
-                    render={({ field }) => (
-                      <div className="h-full">
-                        <RichTextEditor
-                          value={field.value}
-                          onChange={field.onChange}
-                          variables={templateVariables}
-                        />
-                      </div>
-                    )}
-                  />
-                </TabsContent>
-
-                <TabsContent value="preview" className="flex-1 min-h-0">
-                  <div className="h-full overflow-y-auto p-6 bg-white rounded border">
-                    {watchedContent ? (
-                      <div
-                        dangerouslySetInnerHTML={{ __html: watchedContent }}
-                        className="prose prose-sm max-w-none"
-                        style={{
-                          color: "#000",
-                          fontSize: "14px",
-                          lineHeight: "1.5",
-                        }}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground italic">
-                        Plain text preview will appear here when you add content
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         )}
 
+        {/* Step 2: Enhanced Email Builder with Responsive Layout */}
         {step === 2 && (
-          <div className="mt-6 flex items-center justify-between">
-            <Button variant="outline" onClick={prevStep}>
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Back to Basic Info
-            </Button>
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 lg:gap-6 min-h-[calc(100vh-200px)]">
+            {/* Left Panel - Email Builder - Responsive */}
+            <div className="xl:col-span-5 flex flex-col gap-4">
+              {/* Block Palette */}
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-purple-50 rounded-lg">
+                        <Layers className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <CardTitle className="text-lg">Content Blocks</CardTitle>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-2 2xl:grid-cols-3 gap-2">
+                    {blockTypes.map(
+                      ({ type, icon: Icon, label, description }) => (
+                        <Button
+                          key={type}
+                          variant="outline"
+                          onClick={() => addBlock(type as EmailBlock["type"])}
+                          className="h-auto p-3 flex-col gap-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+                          title={description}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="text-xs font-medium">{label}</span>
+                        </Button>
+                      )
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Block Editor */}
+              <Card className="flex-1 border shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-green-50 rounded-lg">
+                        <Settings className="h-5 w-5 text-green-600" />
+                      </div>
+                      <CardTitle className="text-lg">Email Structure</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        <Layers className="h-3 w-3 mr-1" />
+                        {emailBlocks.length}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-hidden">
+                  <div className="h-full max-h-[600px] xl:max-h-[500px] overflow-y-auto space-y-3 pr-2">
+                    {emailBlocks.length === 0 ? (
+                      <div className="flex items-center justify-center h-full min-h-[300px] text-muted-foreground">
+                        <div className="text-center space-y-4">
+                          <div className="p-4 bg-muted/30 rounded-full w-fit mx-auto">
+                            <MousePointer className="h-8 w-8" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Start Building</p>
+                            <p className="text-sm">
+                              Add content blocks above to create your email
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      emailBlocks.map((block, index) => {
+                        const blockType = blockTypes.find(
+                          (b) => b.type === block.type
+                        );
+                        const Icon = blockType?.icon || Type;
+
+                        return (
+                          <Card
+                            key={block.id}
+                            className={`transition-all cursor-pointer hover:shadow-md ${
+                              selectedBlockId === block.id
+                                ? "ring-2 ring-primary bg-primary/5"
+                                : "hover:bg-accent/50"
+                            }`}
+                            onClick={() => setSelectedBlockId(block.id)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <Icon className="h-4 w-4 shrink-0" />
+                                  <span className="text-sm font-medium capitalize truncate">
+                                    {block.type} Block
+                                  </span>
+                                  {selectedBlockId === block.id && (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs shrink-0"
+                                    >
+                                      <Settings className="h-3 w-3 mr-1" />
+                                      Active
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      moveBlock(block.id, "up");
+                                    }}
+                                    disabled={index === 0}
+                                    className="h-7 w-7 p-0"
+                                    title="Move up"
+                                  >
+                                    <ChevronUp className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      moveBlock(block.id, "down");
+                                    }}
+                                    disabled={index === emailBlocks.length - 1}
+                                    className="h-7 w-7 p-0"
+                                    title="Move down"
+                                  >
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteBlock(block.id);
+                                    }}
+                                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                    title="Delete block"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Block Content Editor */}
+                              <div className="space-y-3">
+                                {block.type === "text" && (
+                                  <RichTextEditor
+                                    value={
+                                      block.content.html ||
+                                      "<p>Enter your text here...</p>"
+                                    }
+                                    onChange={(html: any) =>
+                                      updateBlock(block.id, {
+                                        content: { ...block.content, html },
+                                      })
+                                    }
+                                  />
+                                )}
+
+                                {block.type === "image" && (
+                                  <div className="space-y-2">
+                                    <div>
+                                      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                        <ImageIcon className="h-3 w-3" />
+                                        Image URL
+                                      </Label>
+                                      <Input
+                                        placeholder="Image URL"
+                                        value={block.content.src || ""}
+                                        onChange={(e) =>
+                                          updateBlock(block.id, {
+                                            content: {
+                                              ...block.content,
+                                              src: e.target.value,
+                                            },
+                                          })
+                                        }
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                        <Type className="h-3 w-3" />
+                                        Alt text
+                                      </Label>
+                                      <Input
+                                        placeholder="Alt text"
+                                        value={block.content.alt || ""}
+                                        onChange={(e) =>
+                                          updateBlock(block.id, {
+                                            content: {
+                                              ...block.content,
+                                              alt: e.target.value,
+                                            },
+                                          })
+                                        }
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {block.type === "link" && (
+                                  <div className="space-y-2">
+                                    <div>
+                                      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                        <Type className="h-3 w-3" />
+                                        Link text
+                                      </Label>
+                                      <Input
+                                        placeholder="Link text"
+                                        value={block.content.text || ""}
+                                        onChange={(e) =>
+                                          updateBlock(block.id, {
+                                            content: {
+                                              ...block.content,
+                                              text: e.target.value,
+                                            },
+                                          })
+                                        }
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                        <Link className="h-3 w-3" />
+                                        URL
+                                      </Label>
+                                      <Input
+                                        placeholder="URL"
+                                        value={block.content.url || ""}
+                                        onChange={(e) =>
+                                          updateBlock(block.id, {
+                                            content: {
+                                              ...block.content,
+                                              url: e.target.value,
+                                            },
+                                          })
+                                        }
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {block.type === "video" && (
+                                  <div className="space-y-2">
+                                    <div>
+                                      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                        <Type className="h-3 w-3" />
+                                        Video title
+                                      </Label>
+                                      <Input
+                                        placeholder="Video title"
+                                        value={block.content.title || ""}
+                                        onChange={(e) =>
+                                          updateBlock(block.id, {
+                                            content: {
+                                              ...block.content,
+                                              title: e.target.value,
+                                            },
+                                          })
+                                        }
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                        <Video className="h-3 w-3" />
+                                        Video URL
+                                      </Label>
+                                      <Input
+                                        placeholder="Video URL"
+                                        value={block.content.url || ""}
+                                        onChange={(e) =>
+                                          updateBlock(block.id, {
+                                            content: {
+                                              ...block.content,
+                                              url: e.target.value,
+                                            },
+                                          })
+                                        }
+                                        className="mt-1"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {block.type === "spacer" && (
+                                  <div>
+                                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                      <Layout className="h-3 w-3" />
+                                      Height (e.g., 20px)
+                                    </Label>
+                                    <Input
+                                      placeholder="Height (e.g., 20px)"
+                                      value={block.content.height || ""}
+                                      onChange={(e) =>
+                                        updateBlock(block.id, {
+                                          content: {
+                                            ...block.content,
+                                            height: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      className="mt-1"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Panel - Enhanced Preview with Device Selection */}
+            <div className="xl:col-span-7">
+              <Card className="h-full border shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-orange-50 rounded-lg">
+                        <Eye className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <CardTitle className="text-lg">Live Preview</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+                        <Button
+                          variant={
+                            previewDevice === "desktop" ? "default" : "ghost"
+                          }
+                          size="sm"
+                          onClick={() => setPreviewDevice("desktop")}
+                          className="h-7 px-2"
+                          title="Desktop view"
+                        >
+                          <Monitor className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant={
+                            previewDevice === "tablet" ? "default" : "ghost"
+                          }
+                          size="sm"
+                          onClick={() => setPreviewDevice("tablet")}
+                          className="h-7 px-2"
+                          title="Tablet view"
+                        >
+                          <Tablet className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant={
+                            previewDevice === "mobile" ? "default" : "ghost"
+                          }
+                          size="sm"
+                          onClick={() => setPreviewDevice("mobile")}
+                          className="h-7 px-2"
+                          title="Mobile view"
+                        >
+                          <Smartphone className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={prevStep}
+                        className="shrink-0"
+                      >
+                        <ChevronLeft className="mr-1 h-3 w-3" />
+                        <span className="hidden sm:inline">Back</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-hidden">
+                  <div className="h-full max-h-[600px] xl:max-h-[500px]  rounded-lg border-2 border-dashed border-gray-200 overflow-y-auto flex justify-center">
+                    {emailBlocks.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground p-8">
+                        <div className="text-center space-y-4">
+                          <div className="p-4 bg-muted/20 rounded-full w-fit mx-auto">
+                            <Eye className="h-8 w-8" />
+                          </div>
+                          <div>
+                            <p className="font-medium">Preview Area</p>
+                            <p className="text-sm">
+                              Your email will appear here as you build it
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={` ${getPreviewWidth()} px-8 w-full`}>
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: generateEmailHTML(),
+                          }}
+                          className="prose prose-sm max-w-none [&>div]:mb-4 [&>div>p]:mb-2 [&>div>h1]:mb-3 [&>div>h2]:mb-3 [&>div>h3]:mb-3"
+                          style={{
+                            fontFamily:
+                              '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            lineHeight: "2",
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </div>

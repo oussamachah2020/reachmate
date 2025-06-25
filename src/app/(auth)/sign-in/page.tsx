@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { signInUser, signInWithLinkedIn } from "@/loaders/auth";
+import { signInAsGuest, signInUser, signInWithLinkedIn } from "@/loaders/auth";
 import { toast } from "sonner";
 import { z } from "zod";
 import { LinkedInLogoIcon } from "@radix-ui/react-icons";
@@ -189,6 +189,13 @@ export default function SignInPage() {
               >
                 <LinkedInLogoIcon className="h-4 w-4 text-blue-500 " />
                 Sign In with LinkedIn
+              </Button>
+              <Button
+                variant="outline"
+                onClick={signInAsGuest}
+                disabled={isLoading}
+              >
+                Sign In as a Guest
               </Button>
             </div>
           </CardContent>

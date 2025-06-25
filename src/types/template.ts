@@ -13,6 +13,7 @@ export type Template = {
   subject: string;
   description: string | null;
   body: string;
+  isDefault: boolean;
   category: Category | null;
   tag: Tag | null;
   createdAt: string;

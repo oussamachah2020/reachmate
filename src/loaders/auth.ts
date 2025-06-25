@@ -45,6 +45,38 @@ async function signUpUser(data: RegisterDto) {
   }
 }
 
+async function signInAsGuest() {
+  try {
+    const { data, error } = await supabase.auth.signInAnonymously();
+
+    if (error) {
+      return {
+        success: false,
+        data: error.message,
+      };
+    }
+
+    await supabase.from("sender").insert({
+      id: data.user?.id,
+      firstName: "Guest",
+      lastName: "",
+      email: "onboarding@reachmate.xyz",
+      isAnonymous: data.user?.is_anonymous,
+    });
+
+    useAuthStore.setState(() => ({ session: data.session }));
+    useAuthStore.setState(() => ({ user: data.user }));
+
+    return { success: true, data };
+  } catch (err) {
+    console.error(err);
+    return {
+      success: false,
+      data: err,
+    };
+  }
+}
+
 async function signInWithLinkedIn() {
   try {
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -179,4 +211,5 @@ export {
   requestPasswordResetEmail,
   updateUserPassword,
   signInWithLinkedIn,
+  signInAsGuest,
 };

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,6 +13,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Paperclip,
   FileText,
@@ -21,6 +25,13 @@ import {
   Users,
   User,
   LoaderCircle,
+  Mail,
+  Tag,
+  FolderOpen,
+  Reply,
+  AtSign,
+  MessageSquare,
+  Trash2,
 } from "lucide-react";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import { TemplatePickerDialog } from "./template-picker-dialog";
@@ -37,8 +48,7 @@ import {
 import { toast } from "sonner";
 import { ReceiverEmailSelect } from "./receiver-email-creatble-select";
 import AttachmentsDialog from "./attachments-dialog";
-import { Separator } from "../ui/separator";
-import { Attachment } from "@/types/inbox";
+import type { Attachment } from "@/types/inbox";
 
 // Define Zod schema for form validation
 const emailSchema = z.string().email("Invalid email address").trim();
@@ -58,7 +68,7 @@ const formSchema = z
     subject: z.string().min(1, "Subject is required"),
     cc: z.string().optional(),
     categoryId: z.string().min(1, "Category is required"),
-    tagId: z.string().min(1, "Tag is required"),
+    tagId: z.string().optional(),
     replyTo: z.string().optional(),
   })
   .refine(
@@ -81,6 +91,7 @@ const EmailSendingDialog = () => {
   const [selectedTemplate, setSelectedTemplate] = useState({
     id: "",
     content: "",
+    isDefault: false,
   });
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -308,7 +319,7 @@ const EmailSendingDialog = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             senderName: `${sender?.firstName} ${sender?.lastName}`,
-            from: user?.email,
+            from: user?.email || sender?.email,
             to: recipient,
             replyTo: data.replyTo,
             subject: data.subject,
@@ -327,7 +338,13 @@ const EmailSendingDialog = () => {
           categoryId: data.categoryId || null,
           tagId: data.tagId || null,
           message: content,
-          templateId: selectedTemplate.id || newTemplateId,
+          templateId:
+            selectedTemplate.isDefault === false
+              ? selectedTemplate.id || newTemplateId
+              : null,
+          defaultTemplateId: selectedTemplate.isDefault
+            ? selectedTemplate.id
+            : null,
           senderId: user?.id,
           resend_email_id: result.id,
           receiverId,
@@ -407,7 +424,7 @@ const EmailSendingDialog = () => {
       setCurrentCcInput("");
       setRecipientError("");
       setContent("");
-      setSelectedTemplate({ id: "", content: "" });
+      setSelectedTemplate({ id: "", content: "", isDefault: false });
       setAttachments([]);
       setIsOpen(false);
     } catch (err) {
@@ -506,351 +523,461 @@ const EmailSendingDialog = () => {
     <div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button className="bg-primary text-white">
-            <PlusIcon className="h-5 w-5" />
-            Compose
+          <Button className="bg-primary text-white shadow-lg hover:shadow-xl transition-all duration-200">
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Compose Email
           </Button>
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-4xl h-[90%] overflow-auto p-0 border-none dark:shadow-white/30 rounded-lg">
-          <div className="flex flex-col">
-            <DialogTitle>
-              <div className="px-4 py-3 border-b text-sm font-medium">
-                New Message
+        <DialogContent className="sm:max-w-5xl h-[95vh] overflow-auto p-0 border-0 shadow-2xl">
+          <div className="flex flex-col h-full bg-gradient-to-br from-background to-muted/20">
+            {/* Enhanced Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-card/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Mail className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-semibold">
+                    Compose Email
+                  </DialogTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Create and send your message
+                  </p>
+                </div>
               </div>
-            </DialogTitle>
+              <Badge variant="secondary" className="text-xs">
+                {recipientMode === "multiple" && multipleRecipients.length > 0
+                  ? `${multipleRecipients.length} recipients`
+                  : "Draft"}
+              </Badge>
+            </div>
 
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className="flex flex-col space-y-3 px-4 py-3"
+              className="flex flex-col flex-1 overflow-hidden"
             >
-              <div className="flex items-center gap-2 p-3 rounded-lg">
-                <Label className="text-sm font-medium">Send to:</Label>
-                <Button
-                  type="button"
-                  variant={recipientMode === "single" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setRecipientMode("single");
-                    setRecipientError("");
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <User className="h-4 w-4" />
-                  Single
-                </Button>
-                <Button
-                  type="button"
-                  variant={recipientMode === "multiple" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setRecipientMode("multiple");
-                    setRecipientError("");
-                  }}
-                  className="flex items-center gap-1"
-                >
-                  <Users className="h-4 w-4" />
-                  Multiple
-                </Button>
-              </div>
-
-              {/* Recipients Section */}
-              {recipientMode === "single" ? (
-                <>
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">To</Label>
-                    <ReceiverEmailSelect
-                      value={toEmail}
-                      onChange={(option) => {
-                        setToEmail(option);
-                        setValue("to", option?.value || "");
-                      }}
-                    />
-                    {errors.to && (
-                      <span className="text-red-500 text-xs">
-                        {errors.to.message}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      CC (optional)
-                    </Label>
-                    <ReceiverEmailSelect
-                      placeholder="Add CC recipient"
-                      value={ccEmail}
-                      onChange={(option) => {
-                        setCcEmail(option);
-                        setValue("cc", option?.value || "");
-                      }}
-                    />
-                    {errors.cc && (
-                      <span className="text-red-500 text-xs">
-                        {errors.cc.message}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Reply To (optional)
-                    </Label>
-                    <Input
-                      placeholder="Add reply-to email (the email address to receive the reply)"
-                      {...register("replyTo")}
-                    />
-                    {errors.replyTo && (
-                      <span className="text-red-500 text-xs">
-                        {errors.replyTo.message}
-                      </span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">To Recipients</Label>
-                    <div className="relative">
-                      <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-background min-h-[50px] items-center">
-                        {multipleRecipients.map((email, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm"
-                          >
-                            <span>{email}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeToRecipient(email)}
-                              className="hover:bg-red-100 hover:text-red-600 rounded-full p-0.5"
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                        <input
-                          type="email"
-                          value={currentToInput}
-                          onChange={(e) => setCurrentToInput(e.target.value)}
-                          onKeyPress={handleToKeyPress}
-                          onBlur={() =>
-                            currentToInput.trim() &&
-                            addToRecipient(currentToInput)
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                {/* Recipient Mode Selector */}
+                <Card className="border-0 shadow-sm bg-card/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Send to:
+                      </Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={
+                            recipientMode === "single" ? "default" : "outline"
                           }
-                          placeholder={
-                            multipleRecipients.length === 0
-                              ? "Type email and press Enter..."
-                              : "Add another email..."
+                          size="sm"
+                          onClick={() => {
+                            setRecipientMode("single");
+                            setRecipientError("");
+                          }}
+                          className="flex items-center gap-2 transition-all"
+                        >
+                          <User className="h-3 w-3" />
+                          Single Recipient
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={
+                            recipientMode === "multiple" ? "default" : "outline"
                           }
-                          className="flex-1 outline-none bg-transparent min-w-[200px] text-sm"
-                        />
+                          size="sm"
+                          onClick={() => {
+                            setRecipientMode("multiple");
+                            setRecipientError("");
+                          }}
+                          className="flex items-center gap-2 transition-all"
+                        >
+                          <Users className="h-3 w-3" />
+                          Multiple Recipients
+                        </Button>
                       </div>
                     </div>
-                    {recipientError && multipleRecipients.length === 0 && (
-                      <span className="text-red-500 text-xs">
-                        {recipientError}
-                      </span>
-                    )}
-                    {errors.toMultiple && (
-                      <span className="text-red-500 text-xs">
-                        {errors.toMultiple.message}
+                  </CardContent>
+                </Card>
+
+                {/* Recipients Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {recipientMode === "single" ? (
+                    <>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <AtSign className="h-4 w-4" />
+                          To *
+                        </Label>
+                        <ReceiverEmailSelect
+                          value={toEmail}
+                          onChange={(option) => {
+                            setToEmail(option);
+                            setValue("to", option?.value || "");
+                          }}
+                        />
+                        {errors.to && (
+                          <span className="text-destructive text-xs">
+                            {errors.to.message}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <AtSign className="h-4 w-4" />
+                          CC
+                        </Label>
+                        <ReceiverEmailSelect
+                          placeholder="Add CC recipient"
+                          value={ccEmail}
+                          onChange={(option) => {
+                            setCcEmail(option);
+                            setValue("cc", option?.value || "");
+                          }}
+                        />
+                        {errors.cc && (
+                          <span className="text-destructive text-xs">
+                            {errors.cc.message}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <AtSign className="h-4 w-4" />
+                          To Recipients *
+                        </Label>
+                        <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                          <CardContent className="p-3">
+                            <div className="flex flex-wrap gap-2 min-h-[40px] items-center">
+                              {multipleRecipients.map((email, index) => (
+                                <Badge
+                                  key={index}
+                                  variant="secondary"
+                                  className="flex items-center gap-1 pr-1"
+                                >
+                                  <span className="text-xs">{email}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeToRecipient(email)}
+                                    className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                  >
+                                    <XIcon className="h-3 w-3" />
+                                  </Button>
+                                </Badge>
+                              ))}
+                              <Input
+                                type="email"
+                                value={currentToInput}
+                                onChange={(e) =>
+                                  setCurrentToInput(e.target.value)
+                                }
+                                onKeyPress={handleToKeyPress}
+                                onBlur={() =>
+                                  currentToInput.trim() &&
+                                  addToRecipient(currentToInput)
+                                }
+                                placeholder={
+                                  multipleRecipients.length === 0
+                                    ? "Type email and press Enter..."
+                                    : "Add another email..."
+                                }
+                                className="border-0 shadow-none focus-visible:ring-0 flex-1 min-w-[200px] text-sm"
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                        {recipientError && multipleRecipients.length === 0 && (
+                          <span className="text-destructive text-xs">
+                            {recipientError}
+                          </span>
+                        )}
+                        {errors.toMultiple && (
+                          <span className="text-destructive text-xs">
+                            {errors.toMultiple.message}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <AtSign className="h-4 w-4" />
+                          CC Recipients
+                        </Label>
+                        <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                          <CardContent className="p-3">
+                            <div className="flex flex-wrap gap-2 min-h-[40px] items-center">
+                              {multipleCcRecipients.map((email, index) => (
+                                <Badge
+                                  key={index}
+                                  variant="outline"
+                                  className="flex items-center gap-1 pr-1"
+                                >
+                                  <span className="text-xs">{email}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeCcRecipient(email)}
+                                    className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                  >
+                                    <XIcon className="h-3 w-3" />
+                                  </Button>
+                                </Badge>
+                              ))}
+                              <Input
+                                type="email"
+                                value={currentCcInput}
+                                onChange={(e) =>
+                                  setCurrentCcInput(e.target.value)
+                                }
+                                onKeyPress={handleCcKeyPress}
+                                onBlur={() =>
+                                  currentCcInput.trim() &&
+                                  addCcRecipient(currentCcInput)
+                                }
+                                placeholder={
+                                  multipleCcRecipients.length === 0
+                                    ? "Type CC email and press Enter..."
+                                    : "Add another CC email..."
+                                }
+                                className="border-0 shadow-none focus-visible:ring-0 flex-1 min-w-[200px] text-sm"
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                        {errors.cc && (
+                          <span className="text-destructive text-xs">
+                            {errors.cc.message}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Reply To Field */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Reply className="h-4 w-4" />
+                    Reply To
+                  </Label>
+                  <Input
+                    placeholder="Reply-to email address"
+                    {...register("replyTo")}
+                    className="transition-all focus:ring-2 focus:ring-primary/20"
+                  />
+                  {errors.replyTo && (
+                    <span className="text-destructive text-xs">
+                      {errors.replyTo.message}
+                    </span>
+                  )}
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* Subject */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Subject *
+                  </Label>
+                  <Input
+                    placeholder="Enter email subject"
+                    {...register("subject")}
+                    className="text-base transition-all focus:ring-2 focus:ring-primary/20"
+                  />
+                  {errors.subject && (
+                    <span className="text-destructive text-xs">
+                      {errors.subject.message}
+                    </span>
+                  )}
+                </div>
+
+                {/* Category and Tag */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4" />
+                      Category *
+                    </Label>
+                    <Select
+                      onValueChange={(val) => setValue("categoryId", val)}
+                    >
+                      <SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <div className="flex items-center gap-2">
+                              <FolderOpen className="h-3 w-3" />
+                              {cat.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.categoryId && (
+                      <span className="text-destructive text-xs">
+                        {errors.categoryId.message}
                       </span>
                     )}
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">
-                      CC Recipients (optional)
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Tag className="h-4 w-4" />
+                      Tag
                     </Label>
-                    <div className="relative">
-                      <div className="flex flex-wrap gap-2 p-3 border rounded-lg bg-background min-h-[50px] items-center">
-                        {multipleCcRecipients.map((email, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center gap-1 bg-secondary/50 text-secondary-foreground px-2 py-1 rounded-md text-sm"
-                          >
-                            <span>{email}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeCcRecipient(email)}
-                              className="hover:bg-red-100 hover:text-red-600 rounded-full p-0.5"
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </button>
-                          </div>
+                    <Select onValueChange={(val) => setValue("tagId", val)}>
+                      <SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+                        <SelectValue placeholder="Select a tag" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tags.map((tag) => (
+                          <SelectItem key={tag.id} value={tag.id}>
+                            <div className="flex items-center gap-2">
+                              <Tag className="h-3 w-3" />
+                              {tag.name}
+                            </div>
+                          </SelectItem>
                         ))}
-                        <input
-                          type="email"
-                          value={currentCcInput}
-                          onChange={(e) => setCurrentCcInput(e.target.value)}
-                          onKeyPress={handleCcKeyPress}
-                          onBlur={() =>
-                            currentCcInput.trim() &&
-                            addCcRecipient(currentCcInput)
-                          }
-                          placeholder={
-                            multipleCcRecipients.length === 0
-                              ? "Type CC email and press Enter..."
-                              : "Add another CC email..."
-                          }
-                          className="flex-1 outline-none bg-transparent min-w-[200px] text-sm"
-                        />
-                      </div>
-                    </div>
-                    {errors.cc && (
-                      <span className="text-red-500 text-xs">
-                        {errors.cc.message}
+                      </SelectContent>
+                    </Select>
+                    {errors.tagId && (
+                      <span className="text-destructive text-xs">
+                        {errors.tagId.message}
                       </span>
                     )}
                   </div>
-                </>
-              )}
+                </div>
 
-              <Separator />
+                {/* Message Content */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Message Content
+                  </Label>
+                  <Card className="border-0 shadow-sm">
+                    <CardContent className="p-0">
+                      <RichTextEditor
+                        value={content}
+                        htmlContent={selectedTemplate.content}
+                        onChange={setContent}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
 
-              <div>
-                <Input
-                  id="subject"
-                  placeholder="Subject"
-                  className="text-sm"
-                  {...register("subject")}
-                />
-                {errors.subject && (
-                  <span className="text-red-500 text-xs">
-                    {errors.subject.message}
-                  </span>
+                {/* Attachments Display */}
+                {attachments.length > 0 && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      Attachments ({attachments.length})
+                    </Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {attachments.map((file, index) => (
+                        <Card
+                          key={file.path || index}
+                          className="group hover:shadow-md transition-all"
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                <a
+                                  href={file.url || file.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm hover:underline truncate"
+                                  title={file.name || file.fileName}
+                                >
+                                  {file.name || file.fileName}
+                                </a>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(file.path)}
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
 
-              <div className="flex gap-3 w-full">
-                <div className="w-full space-y-2">
-                  <Label htmlFor="categoryId">Category</Label>
-                  <Select onValueChange={(val) => setValue("categoryId", val)}>
-                    <SelectTrigger id="categoryId" className="w-full">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.categoryId && (
-                    <span className="text-red-500 text-xs">
-                      {errors.categoryId.message}
-                    </span>
-                  )}
-                </div>
-
-                <div className="w-full space-y-2">
-                  <Label htmlFor="tagId">Tag</Label>
-                  <Select onValueChange={(val) => setValue("tagId", val)}>
-                    <SelectTrigger id="tagId" className="w-full">
-                      <SelectValue placeholder="Select a tag" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tags.map((tag) => (
-                        <SelectItem key={tag.id} value={tag.id}>
-                          {tag.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.tagId && (
-                    <span className="text-red-500 text-xs">
-                      {errors.tagId.message}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Message (Template)</Label>
-                <RichTextEditor
-                  value={content}
-                  htmlContent={selectedTemplate.content}
-                  onChange={setContent}
-                />
-              </div>
-
-              {attachments.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {attachments.map((file, index) => (
-                    <div
-                      key={file.path || index}
-                      className="group relative flex items-center px-3 py-2 bg-gray-100 rounded-md text-sm text-gray-800 border"
+              {/* Enhanced Footer */}
+              <div className="border-t bg-card/50 backdrop-blur-sm px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <TemplatePickerDialog
+                      onSelect={(template) => {
+                        setSelectedTemplate({
+                          id: template.id,
+                          content: template.content,
+                          isDefault: template.isDefault,
+                        });
+                        setContent(template.content);
+                      }}
+                    />
+                    <Separator orientation="vertical" className="h-6" />
+                    <label
+                      htmlFor="file-upload"
+                      className="cursor-pointer flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
-                      <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
-                      <a
-                        href={file.url || file.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline max-w-[180px] truncate"
-                      >
-                        {file.name || file.fileName}
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(file.path)}
-                        className="absolute top-0 right-0 p-1 hidden group-hover:flex text-gray-500 hover:text-red-600"
-                      >
-                        <XIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      <Paperclip className="h-4 w-4" />
+                      {uploading ? "Uploading..." : "Quick Upload"}
+                    </label>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      hidden
+                      multiple
+                      onChange={(e) => handleFileUpload(e.target.files)}
+                    />
+                    <AttachmentsDialog
+                      selectedAttachments={attachments}
+                      onAttachmentsChange={setAttachments}
+                    />
+                  </div>
 
-              <div className="flex justify-between items-center pt-2 border-t mt-4">
-                <div className="flex items-center space-x-2">
-                  <TemplatePickerDialog
-                    onSelect={(template) => {
-                      setSelectedTemplate({
-                        id: template.id,
-                        content: template.content,
-                      });
-                      setContent(template.content);
-                    }}
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="cursor-pointer dark:text-white text-gray-500 flex items-center hover:text-primary text-sm"
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-primary text-white shadow-lg hover:shadow-xl transition-all duration-200 min-w-[120px]"
                   >
-                    <Paperclip className="h-4 w-4 mr-1" />
-                    {uploading ? "Uploading..." : "Quick Upload"}
-                  </label>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    hidden
-                    multiple
-                    onChange={(e) => handleFileUpload(e.target.files)}
-                  />
-                  <div className="h-5 bg-gray-400 w-[1px]" />
-                  <AttachmentsDialog
-                    selectedAttachments={attachments}
-                    onAttachmentsChange={setAttachments}
-                  />
+                    {loading ? (
+                      <LoaderCircle className="animate-spin h-4 w-4" />
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send Email
+                        {recipientMode === "multiple" &&
+                          multipleRecipients.length > 0 && (
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {multipleRecipients.length}
+                            </Badge>
+                          )}
+                      </>
+                    )}
+                  </Button>
                 </div>
-
-                <Button type="submit" className="bg-primary text-white">
-                  {loading ? (
-                    <LoaderCircle className="animate-spin h-5 w-5" />
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-1" />
-                      Send
-                      {recipientMode === "multiple" &&
-                        multipleRecipients.length > 0 && (
-                          <span className="ml-1 text-xs bg-white/20 rounded px-1">
-                            {multipleRecipients.length}
-                          </span>
-                        )}
-                    </>
-                  )}
-                </Button>
               </div>
             </form>
           </div>

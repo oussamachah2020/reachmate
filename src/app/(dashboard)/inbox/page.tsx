@@ -35,14 +35,16 @@ export default function InboxPage() {
         .from("email_sent")
         .select(
           `id, sentAt, isRead, archived, starred, message,
-          resend_email_id, email_status, delivered_at, opened_at, 
+          resend_email_id, email_status, delivered_at, opened_at,
           clicked_at, bounced_at, complained_at,
-          category(id, name), 
-          tag(id, name), 
-          sender(id, firstName, lastName, email), 
-          receiver(id, email), 
+          category(id, name),
+          tag(id, name),
+          sender(id, firstName, lastName, email),
+          receiver(id, email),
           attachment(id, fileUrl, fileName, fileType),
-          template(id, body, subject)`
+          template(id, body, subject),
+          default_template(id, body, subject)
+          `
         )
         .or(`senderId.eq.${user.id},receiverId.eq.${user.id}`)
         .eq("archived", false)
@@ -69,8 +71,10 @@ export default function InboxPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (email) =>
-          email.template?.subject?.toLowerCase().includes(query) ||
-          email.template?.body?.toLowerCase().includes(query) ||
+          email.template?.subject?.toLowerCase().includes(query) || // Check user template subject
+          email.template?.body?.toLowerCase().includes(query) || // Check user template body
+          email.default_template?.subject?.toLowerCase().includes(query) || // Check default template subject
+          email.default_template?.body?.toLowerCase().includes(query) || // Check default template body
           `${email.sender.firstName} ${email.sender.lastName}`
             .toLowerCase()
             .includes(query) ||
@@ -175,14 +179,16 @@ export default function InboxPage() {
               .from("email_sent")
               .select(
                 `id, sentAt, isRead, archived, starred, message,
-                resend_email_id, email_status, delivered_at, opened_at, 
+                resend_email_id, email_status, delivered_at, opened_at,
                 clicked_at, bounced_at, complained_at,
-                category(id, name), 
-                tag(id, name), 
-                sender(id, firstName, lastName, email), 
-                receiver(id, email), 
+                category(id, name),
+                tag(id, name),
+                sender(id, firstName, lastName, email),
+                receiver(id, email),
                 attachment(id, fileUrl, fileName, fileType),
-                template(id, body, subject)`
+                template(id, body, subject), 
+                default_template(id, body, subject)
+                `
               )
               .eq("id", payload.new.id)
               .single();
@@ -216,14 +222,16 @@ export default function InboxPage() {
               .from("email_sent")
               .select(
                 `id, sentAt, isRead, archived, starred, message,
-                resend_email_id, email_status, delivered_at, opened_at, 
+                resend_email_id, email_status, delivered_at, opened_at,
                 clicked_at, bounced_at, complained_at,
-                category(id, name), 
-                tag(id, name), 
-                sender(id, firstName, lastName, email), 
-                receiver(id, email), 
+                category(id, name),
+                tag(id, name),
+                sender(id, firstName, lastName, email),
+                receiver(id, email),
                 attachment(id, fileUrl, fileName, fileType),
-                template(id, body, subject)`
+                template(id, body, subject),
+                default_template(id, body, subject)
+                `
               )
               .eq("id", payload.new.id)
               .single();
@@ -325,14 +333,16 @@ export default function InboxPage() {
               .from("email_sent")
               .select(
                 `id, sentAt, isRead, archived, starred, message,
-                email_status, delivered_at, opened_at, 
+                email_status, delivered_at, opened_at,
                 clicked_at, bounced_at, complained_at,
-                category(id, name), 
-                tag(id, name), 
-                sender(id, firstName, lastName, email), 
-                receiver(id, email), 
+                category(id, name),
+                tag(id, name),
+                sender(id, firstName, lastName, email),
+                receiver(id, email),
                 attachment(id, fileUrl, fileName, fileType),
-                template(id, body, subject)`
+                template(id, body, subject), 
+                default_template(id, body, subject)
+                `
               )
               .eq("id", payload.new.id)
               .single();
@@ -366,14 +376,16 @@ export default function InboxPage() {
               .from("email_sent")
               .select(
                 `id, sentAt, isRead, archived, starred, message,
-                resend_email_id, email_status, delivered_at, opened_at, 
+                resend_email_id, email_status, delivered_at, opened_at,
                 clicked_at, bounced_at, complained_at,
-                category(id, name), 
-                tag(id, name), 
-                sender(id, firstName, lastName, email), 
-                receiver(id, email), 
+                category(id, name),
+                tag(id, name),
+                sender(id, firstName, lastName, email),
+                receiver(id, email),
                 attachment(id, fileUrl, fileName, fileType),
-                template(id, body, subject)`
+                template(id, body, subject),
+                default_template(id, body, subject)
+                `
               )
               .eq("id", payload.new.id)
               .single();

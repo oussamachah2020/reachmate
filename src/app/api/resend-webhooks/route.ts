@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers"; // This is a dynamic function
-import crypto from "crypto";
+
 import { supabase } from "@/lib/supabase/client";
 
 const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;

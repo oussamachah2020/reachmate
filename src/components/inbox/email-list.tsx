@@ -397,7 +397,9 @@ export function EmailList({
                       : "font-medium text-gray-700 dark:text-gray-300"
                   )}
                 >
-                  {email.template?.subject || "No Subject"}
+                  {email.template?.subject ||
+                    email.default_template?.subject ||
+                    "No Subject"}
                 </h3>
 
                 {/* Preview Text */}

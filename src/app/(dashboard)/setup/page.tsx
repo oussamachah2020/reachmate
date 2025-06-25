@@ -16,7 +16,7 @@ const Page = (props: Props) => {
     async function getSenderInfo() {
       const { data, error } = await supabase
         .from("sender")
-        .select("firstName, lastName")
+        .select("firstName, lastName, email")
         .eq("id", user?.id)
         .single();
 

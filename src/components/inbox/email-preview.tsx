@@ -127,7 +127,9 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-lg font-semibold truncate">
-            {currentEmail.template?.subject || "No Subject"}
+            {currentEmail.template?.subject ||
+              currentEmail.default_template?.subject ||
+              "No Subject"}
           </h2>
           <div className="flex items-center space-x-2">
             {currentEmail.category && (
@@ -261,7 +263,8 @@ export function EmailPreview({ activeEmail, emailList }: EmailPreviewProps) {
 
         {/* Email body */}
         <div className="prose prose-sm max-w-none">
-          {currentEmail.template?.body ? (
+          {currentEmail.template?.body ||
+          currentEmail.default_template?.body ? (
             <div
               className="leading-relaxed"
               dangerouslySetInnerHTML={{

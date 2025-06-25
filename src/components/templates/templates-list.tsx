@@ -106,15 +106,34 @@ export function TemplatesList({
           category ( id, name )
         `
         )
-        .order("createdAt", { ascending: false });
+        .order("createdAt", { ascending: false })
+        .eq("senderId", user?.id);
 
-      if (error) {
-        console.error("Error fetching templates:", error);
-        toast.error("Failed to load templates");
-        return;
-      }
+      const { data: defaultTemplate, error: defaultTemplateError } =
+        await supabase
+          .from("default_template")
+          .select(
+            `
+          id,
+          subject,
+          body,
+          description,
+          createdAt,
+          updatedAt,
+          category ( id, name )
+        `
+          )
+          .order("createdAt", { ascending: false });
 
-      setTemplates(data as unknown as Template[]);
+        if (error || defaultTemplateError) {
+          console.error("Error fetching templates:", error || defaultTemplate);
+          toast.error("Failed to load templates");
+          return;
+        }
+
+        const mergedTemplates = [...defaultTemplate, ...data];
+
+        setTemplates(mergedTemplates as unknown as Template[]);
     } catch (error) {
       console.error("Error fetching templates:", error);
       toast.error("Failed to load templates");

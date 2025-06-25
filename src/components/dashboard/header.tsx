@@ -18,6 +18,7 @@ import { useAuthStore } from "@/zustand/auth.store";
 import { ModeToggle } from "../mode-toggle";
 import { useRouter } from "next/navigation";
 import { PLAN } from "@/types/auth";
+import { supabase } from "@/lib/supabase/client";
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -25,7 +26,14 @@ export function Header() {
   const { user, plan } = useAuthStore();
   const router = useRouter();
 
-  console.log({ user, plan });
+  async function signOut() {
+    if (user?.is_anonymous === true) {
+      await supabase.from("sender").delete().eq("id", user.id);
+    }
+
+    logout();
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 md:px-6 glassmorphism">
       <div className="hidden md:block md:w-1/3 ">
@@ -60,7 +68,7 @@ export function Header() {
                   alt="User"
                 />
                 <AvatarFallback className="text-md bg-primary text-white">
-                  {user?.user_metadata ? (
+                  {user?.user_metadata && user.user_metadata.displayName ? (
                     user?.user_metadata.displayName[0]
                   ) : (
                     <User className="h-3 w-3" />
@@ -75,7 +83,7 @@ export function Header() {
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="text-red-500">
+            <DropdownMenuItem onClick={signOut} className="text-red-500">
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

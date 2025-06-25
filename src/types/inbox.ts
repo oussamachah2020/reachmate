@@ -17,6 +17,7 @@ export type Email = {
   category: { id: string; name: string } | null;
   tag: { id: string; name: string } | null;
   template: { id: string; body: string; subject: string } | null;
+  default_template: { id: string; body: string; subject: string } | null;
   sender: { id: string; firstName: string; lastName: string; email: string };
   receiver: { id: string; email: string };
   attachment: {
