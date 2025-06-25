@@ -29,10 +29,7 @@ export function Header() {
     setIsMobileMenuOpen(false);
     const element = document.getElementById(targetId);
     if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -44,7 +41,11 @@ export function Header() {
           : "py-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg"
       }`}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/95 to-white/90 dark:from-slate-900/90 dark:via-slate-900/95 dark:to-slate-900/90 backdrop-blur-xl"></div>
+      <div
+        className={`absolute inset-0 bg-gradient-to-r from-white/90 via-white/95 to-white/90 dark:from-slate-900/90 dark:via-slate-900/95 dark:to-slate-900/90 backdrop-blur-xl transition-opacity duration-300 ${
+          isMobileMenuOpen ? "opacity-0" : "opacity-100"
+        }`}
+      ></div>
 
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
 
@@ -55,9 +56,7 @@ export function Header() {
               <div className="h-10 w-10 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 p-2 shadow-lg flex items-center justify-center transition-all duration-300 group-hover:shadow-xl group-hover:scale-110">
                 <Mail className="h-6 w-6 text-white" />
               </div>
-
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-emerald-500/30 to-teal-500/30 opacity-0 group-hover:opacity-100 blur-lg transition-all duration-500 animate-pulse"></div>
-
               <div className="absolute top-0 right-0 transform translate-x-1 -translate-y-1">
                 <Sparkles className="h-3 w-3 text-emerald-400 opacity-0 group-hover:opacity-100 transition-all duration-300 animate-spin" />
               </div>
@@ -70,7 +69,7 @@ export function Header() {
 
           <div className="hidden md:flex items-center space-x-8">
             <nav className="flex items-center space-x-6 animate-fade-in-up">
-              {navLinks?.map((link, index) => (
+              {navLinks.map((link, index) => (
                 <a
                   key={index}
                   href={link.href}
@@ -78,11 +77,9 @@ export function Header() {
                   onClick={(e) => handleSmoothScroll(e, link.href.slice(1))}
                 >
                   {link.name}
-
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full"></div>
                 </a>
               ))}
-
               <ThemeToggle />
             </nav>
 
@@ -93,14 +90,12 @@ export function Header() {
               >
                 Sign in
               </a>
-
-              <Link href={"/sign-in"}>
-                <Button size="sm" className="relative overflow-hidden">
+              <Link href="/sign-in">
+                <Button size="sm" className="relative overflow-hidden group">
                   <span className="relative z-10 flex items-center text-white">
                     Get Started
                     <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
                   </span>
-
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 </Button>
               </Link>
@@ -113,22 +108,32 @@ export function Header() {
           >
             <div className="relative w-6 h-6">
               <Menu
-                className={`absolute inset-0 h-6 w-6 text-gray-700 dark:text-slate-300 transition-all duration-300 ${isMobileMenuOpen ? "rotate-90 opacity-0" : "rotate-0 opacity-100"}`}
+                className={`absolute inset-0 h-6 w-6 text-gray-700 dark:text-slate-300 transition-all duration-300 ${
+                  isMobileMenuOpen
+                    ? "rotate-90 opacity-0"
+                    : "rotate-0 opacity-100"
+                }`}
               />
               <X
-                className={`absolute inset-0 h-6 w-6 text-gray-700 dark:text-slate-300 transition-all duration-300 ${isMobileMenuOpen ? "rotate-0 opacity-100" : "-rotate-90 opacity-0"}`}
+                className={`absolute inset-0 h-6 w-6 text-gray-700 dark:text-slate-300 transition-all duration-300 ${
+                  isMobileMenuOpen
+                    ? "rotate-0 opacity-100"
+                    : "-rotate-90 opacity-0"
+                }`}
               />
             </div>
-
             <div className="absolute inset-0 rounded-xl bg-emerald-500 opacity-0 group-hover:opacity-10 blur-lg transition-all duration-300"></div>
           </button>
         </div>
       </div>
 
+      {/* Mobile Menu */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-500 ${isMobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
+        className={`md:hidden overflow-hidden transition-all duration-500 z-[60] ${
+          isMobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        }`}
       >
-        <div className="absolute left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-gray-200/20 dark:border-slate-700/20 shadow-xl">
+        <div className="absolute left-0 right-0 bg-white dark:bg-slate-900 backdrop-blur-xl border-t border-gray-200/80 dark:border-slate-700/20 shadow-xl">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent"></div>
 
           <nav className="flex flex-col px-4 py-6 space-y-2">
@@ -141,7 +146,7 @@ export function Header() {
               >
                 <span className="flex items-center">
                   {link.name}
-                  <ArrowRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
+                  <ArrowRight className="w-4 h-4 ml-auto opacity-100 group-hover:translate-x-1 transition-all duration-300" />
                 </span>
               </a>
             ))}
@@ -154,8 +159,8 @@ export function Header() {
                 Sign in
               </a>
 
-              <Link href={"/sign-up"}>
-                <Button size="sm" className="w-full">
+              <Link href="/sign-up">
+                <Button size="sm" className="w-full group">
                   <span className="flex items-center justify-center text-white">
                     Get Started
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
