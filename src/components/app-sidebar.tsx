@@ -6,7 +6,7 @@ import {
   Settings,
   History,
   TimerIcon,
-  SparkleIcon,
+  GlassesIcon,
 } from "lucide-react";
 
 import {
@@ -21,7 +21,6 @@ import {
 import { Separator } from "./ui/separator";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
 
 // Menu items.
 const items = [
@@ -35,11 +34,6 @@ const items = [
     href: "/inbox",
     icon: Mail,
   },
-  // {
-  //   title: "Sent",
-  //   href: "/sent",
-  //   icon: Send,
-  // },
   {
     title: "Templates",
     href: "/templates",
@@ -55,6 +49,11 @@ const items = [
   //   href: "/smart-replies",
   //   icon: SparkleIcon,
   // },
+  {
+    title: "Email Review",
+    href: "/review",
+    icon: GlassesIcon,
+  },
   {
     title: "History",
     href: "/history",
