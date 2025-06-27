@@ -80,6 +80,7 @@ type EmailBlock = {
     fontStyle?: "normal" | "italic";
     textDecoration?: "none" | "underline";
     color?: string;
+    height: string;
     backgroundColor?: string;
     padding?: string;
     margin?: string;
@@ -131,6 +132,102 @@ export default function CreateTemplatePage() {
     },
   });
 
+  // Parse HTML body into email blocks
+  const parseHTMLToBlocks = (html: string): EmailBlock[] => {
+    if (!html) return [];
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const divs = Array.from(doc.body.querySelectorAll("div"));
+
+      return divs
+        .map((div, index): EmailBlock | null => {
+          const styleAttr = div.getAttribute("style") || "";
+          const styles = styleAttr.split(";").reduce(
+            (acc, style) => {
+              const [key, value] = style.split(":").map((s) => s.trim());
+              if (key && value) {
+                //@ts-ignore
+                acc[
+                  key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())
+                ] = value;
+              }
+              return acc;
+            },
+            {} as EmailBlock["styles"],
+          );
+
+          // Handle image block
+          const img = div.querySelector("img");
+          if (img) {
+            return {
+              id: `block-${Date.now()}-${index}`,
+              type: "image",
+              content: {
+                src: img.getAttribute("src") || "",
+                alt: img.getAttribute("alt") || "",
+              },
+              styles,
+            };
+          }
+
+          // Handle spacer block (empty div with height style)
+          if (styleAttr.includes("height") && !div.innerHTML.trim()) {
+            return {
+              id: `block-${Date.now()}-${index}`,
+              type: "spacer",
+              content: { height: styles.height || "20px" },
+              styles,
+            };
+          }
+
+          // Handle link or video block (single <a> element in the div)
+          const singleAnchor = div.querySelector("a");
+          if (
+            singleAnchor &&
+            div.childNodes.length === 1 &&
+            div.childNodes[0].nodeName === "A"
+          ) {
+            const isVideo = singleAnchor
+              .getAttribute("href")
+              ?.includes("youtube");
+            return {
+              id: `block-${Date.now()}-${index}`,
+              type: isVideo ? "video" : "link",
+              content: isVideo
+                ? {
+                    title:
+                      singleAnchor.textContent?.replace("📹 ", "") ||
+                      "Video Link",
+                    url: singleAnchor.getAttribute("href") || "",
+                  }
+                : {
+                    text: singleAnchor.textContent || "Link",
+                    url: singleAnchor.getAttribute("href") || "",
+                  },
+              styles,
+            };
+          }
+
+          // Handle text block (including rich HTML content with embedded links)
+          if (div.innerHTML.trim()) {
+            return {
+              id: `block-${Date.now()}-${index}`,
+              type: "text",
+              content: { html: div.innerHTML },
+              styles,
+            };
+          }
+
+          return null;
+        })
+        .filter((block): block is EmailBlock => block !== null);
+    } catch (error) {
+      console.error("Error parsing HTML to blocks:", error);
+      return [];
+    }
+  };
+
   // Generate HTML from email blocks
   const generateEmailHTML = () => {
     const html = emailBlocks
@@ -175,6 +272,99 @@ export default function CreateTemplatePage() {
     return html;
   };
 
+  // Fetch categories and tags
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch categories
+        const { data: categoryData, error: categoryError } = await supabase
+          .from("category")
+          .select("id, name");
+        if (categoryError) {
+          console.error("Error fetching categories:", categoryError);
+          toast.error("Failed to load categories");
+          return;
+        }
+        const categoriesWithCount = categoryData.map((category) => ({
+          ...category,
+          count: 0,
+        }));
+        setCategories(categoriesWithCount);
+
+        // Fetch tags
+        const { data: tagData, error: tagError } = await supabase
+          .from("tag")
+          .select("id, name");
+        if (tagError) {
+          console.error("Error fetching tags:", tagError);
+          toast.error("Failed to load tags");
+          return;
+        }
+        const tagsWithCount = tagData.map((tag) => ({
+          ...tag,
+          count: 0,
+        }));
+        setTags(tagsWithCount);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Error loading data, please try again");
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  // Initialize form and email blocks with selectedTemplate
+  useEffect(() => {
+    if (!categories.length) return; // Wait for categories to load
+
+    if (selectedTemplate) {
+      // Validate categoryId
+      const validCategoryId = categories.find(
+        (cat) => cat.id === selectedTemplate.category?.id,
+      )
+        ? selectedTemplate.category?.id
+        : "";
+
+      reset({
+        templateName: selectedTemplate.subject || "",
+        categoryId: validCategoryId || "",
+        tagId: selectedTemplate.tag?.id || "",
+        description: selectedTemplate.description || "",
+        content: selectedTemplate.body || "",
+      });
+
+      if (selectedTemplate.body) {
+        const parsedBlocks = parseHTMLToBlocks(selectedTemplate.body);
+        setEmailBlocks(parsedBlocks);
+        if (parsedBlocks.length > 0) {
+          setSelectedBlockId(parsedBlocks[0].id);
+        } else {
+          setSelectedBlockId(null);
+        }
+      } else {
+        setEmailBlocks([]);
+        setSelectedBlockId(null);
+      }
+
+      if (!validCategoryId && selectedTemplate.category?.id) {
+        toast.warning(
+          "Selected template's category is not available. Please select a new category.",
+        );
+      }
+    } else {
+      reset({
+        templateName: "",
+        categoryId: "",
+        tagId: "",
+        description: "",
+        content: "",
+      });
+      setEmailBlocks([]);
+      setSelectedBlockId(null);
+    }
+  }, [selectedTemplate, categories, reset]);
+
   // Update content when blocks change
   useEffect(() => {
     generateEmailHTML();
@@ -191,6 +381,7 @@ export default function CreateTemplatePage() {
         fontWeight: "normal",
         fontStyle: "normal",
         textDecoration: "none",
+        height: "20px",
         backgroundColor: "transparent",
         padding: "16px 0",
         margin: "0 0 16px 0",
@@ -308,59 +499,6 @@ export default function CreateTemplatePage() {
   };
 
   const prevStep = () => setStep(1);
-
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("category")
-        .select("id, name");
-      if (error) {
-        console.error("Error fetching categories:", error);
-        return;
-      }
-      const categoriesWithCount = data.map((category) => ({
-        ...category,
-        count: 0,
-      }));
-      setCategories(categoriesWithCount);
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
-
-  const fetchTags = async () => {
-    try {
-      const { data, error } = await supabase.from("tag").select("id, name");
-      if (error) {
-        console.error("Error fetching tags:", error);
-        return;
-      }
-      const tagsWithCount = data.map((tag) => ({
-        ...tag,
-        count: 0,
-      }));
-      setTags(tagsWithCount);
-    } catch (error) {
-      console.error("Error fetching tags:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-    fetchTags();
-  }, [user]);
-
-  useEffect(() => {
-    if (selectedTemplate) {
-      reset({
-        tagId: selectedTemplate.tag?.id || "",
-        categoryId: selectedTemplate.category?.id || "",
-        templateName: selectedTemplate.subject || "",
-        content: selectedTemplate.body || "",
-        description: selectedTemplate?.description || "",
-      });
-    }
-  }, [selectedTemplate, reset]);
 
   const getPreviewWidth = () => {
     switch (previewDevice) {
@@ -1006,7 +1144,7 @@ export default function CreateTemplatePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 overflow-hidden">
-                  <div className="h-full max-h-[600px] xl:max-h-[500px]  rounded-lg border-2 border-dashed border-gray-200 overflow-y-auto flex justify-center">
+                  <div className="h-full max-h-[600px] xl:max-h-[500px] rounded-lg border-2 border-dashed border-gray-200 overflow-y-auto flex justify-center">
                     {emailBlocks.length === 0 ? (
                       <div className="flex items-center justify-center h-full text-muted-foreground p-8">
                         <div className="text-center space-y-4">
@@ -1022,7 +1160,7 @@ export default function CreateTemplatePage() {
                         </div>
                       </div>
                     ) : (
-                      <div className={` ${getPreviewWidth()} px-8 w-full`}>
+                      <div className={`${getPreviewWidth()} px-8 w-full`}>
                         <div
                           dangerouslySetInnerHTML={{
                             __html: generateEmailHTML(),
