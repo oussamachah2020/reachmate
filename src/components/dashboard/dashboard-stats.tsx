@@ -17,8 +17,6 @@ export function DashboardStats() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuthStore();
 
-  console.log(user);
-
   useEffect(() => {
     async function fetchStats() {
       const today = new Date().toISOString().split("T")[0];

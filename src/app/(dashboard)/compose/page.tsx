@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { ReceiverEmailSelect } from "@/components/inbox/receiver-email-creatble-select";
 import { TemplatePickerDialog } from "@/components/inbox/template-picker-dialog";
 import AttachmentsDialog from "@/components/inbox/attachments-dialog";
+import { updateStorageUsage } from "@/functions/storage-tracker";
 
 type Attachment = {
   id: string;
@@ -79,7 +80,7 @@ export default function ComposeEmailPage() {
 
   // Data
   const [categories, setCategories] = useState<{ id: string; name: string }[]>(
-    []
+    [],
   );
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
 
@@ -147,6 +148,8 @@ export default function ComposeEmailPage() {
         reader.onload = () => resolve((reader.result as string).split(",")[1]);
         reader.readAsDataURL(file);
       });
+
+      updateStorageUsage(user?.id || "", file.size);
 
       uploaded.push({
         id: "",

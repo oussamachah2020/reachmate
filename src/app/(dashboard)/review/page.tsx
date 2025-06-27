@@ -22,6 +22,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthStore } from "@/zustand/auth.store";
 
 const EmailTemplateReviewer = () => {
   const [context, setContext] = useState<string>("");
@@ -30,6 +31,7 @@ const EmailTemplateReviewer = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [hasResult, setHasResult] = useState<boolean>(false);
+  const { user } = useAuthStore();
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
@@ -54,13 +56,13 @@ ${emailTemplate}`;
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ prompt, senderId: user?.id }),
         });
 
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
-            errorData.error || `HTTP error! status: ${response.status}`
+            errorData.error || `HTTP error! status: ${response.status}`,
           );
         }
 
@@ -71,14 +73,14 @@ ${emailTemplate}`;
       } catch (err: any) {
         console.error("Error reviewing email template:", err);
         setError(
-          err.message || "Failed to review email template. Please try again."
+          err.message || "Failed to review email template. Please try again.",
         );
         toast.error("Failed to review email template");
       } finally {
         setIsLoading(false);
       }
     },
-    [context, emailTemplate]
+    [context, emailTemplate],
   );
 
   const handleCopy = useCallback(() => {

@@ -27,6 +27,34 @@ const Page = (props: Props) => {
       setSender(data);
     }
 
+    async function fetchAndCheckUsage() {
+      try {
+        const { data: usage, error: usageError } = await supabase
+          .from("usage")
+          .select("id")
+          .eq("userId", user?.id);
+
+        if (usageError) {
+          console.log(usageError);
+          return;
+        }
+
+        if (usage && usage.length === 0) {
+          await supabase.from("usage").insert({
+            aiRequests: 0,
+            resendRequests: 0,
+            contactsStored: 0,
+            templatesSaved: 0,
+            totalStorageUsed: 0,
+            userId: user?.id,
+          });
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    fetchAndCheckUsage();
     getSenderInfo();
   }, [user]);
 

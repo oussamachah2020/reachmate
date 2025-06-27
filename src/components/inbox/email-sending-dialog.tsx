@@ -58,7 +58,7 @@ const multipleEmailSchema = z.string().refine(
     const emails = value.split(";").map((email) => email.trim());
     return emails.every((email) => emailSchema.safeParse(email).success);
   },
-  { message: "All email addresses must be valid" }
+  { message: "All email addresses must be valid" },
 );
 
 const formSchema = z
@@ -76,7 +76,7 @@ const formSchema = z
       if (data.to || data.toMultiple) return true;
       return false;
     },
-    { message: "At least one recipient is required", path: ["to"] }
+    { message: "At least one recipient is required", path: ["to"] },
   );
 
 type FormValues = z.infer<typeof formSchema>;
@@ -103,13 +103,13 @@ const EmailSendingDialog = () => {
   >([]);
   const [recipientError, setRecipientError] = useState("");
   const [recipientMode, setRecipientMode] = useState<"single" | "multiple">(
-    "single"
+    "single",
   );
   const [toEmail, setToEmail] = useState<EmailOption | null>(null);
   const [ccEmail, setCcEmail] = useState<EmailOption | null>(null);
   const [multipleRecipients, setMultipleRecipients] = useState<string[]>([]);
   const [multipleCcRecipients, setMultipleCcRecipients] = useState<string[]>(
-    []
+    [],
   );
   const [currentToInput, setCurrentToInput] = useState("");
   const [currentCcInput, setCurrentCcInput] = useState("");
@@ -184,7 +184,7 @@ const EmailSendingDialog = () => {
 
   const removeToRecipient = (emailToRemove: string) => {
     setMultipleRecipients(
-      multipleRecipients.filter((email) => email !== emailToRemove)
+      multipleRecipients.filter((email) => email !== emailToRemove),
     );
   };
 
@@ -206,7 +206,7 @@ const EmailSendingDialog = () => {
 
   const removeCcRecipient = (emailToRemove: string) => {
     setMultipleCcRecipients(
-      multipleCcRecipients.filter((email) => email !== emailToRemove)
+      multipleCcRecipients.filter((email) => email !== emailToRemove),
     );
   };
 
@@ -321,6 +321,7 @@ const EmailSendingDialog = () => {
             senderName: `${sender?.firstName} ${sender?.lastName}`,
             from: user?.email || sender?.email,
             to: recipient,
+            senderId: user?.id,
             replyTo: data.replyTo,
             subject: data.subject,
             html: content,
@@ -366,20 +367,20 @@ const EmailSendingDialog = () => {
       const results = await Promise.allSettled(sendPromises);
 
       const successfulSends = results.filter(
-        (r) => r.status === "fulfilled"
+        (r) => r.status === "fulfilled",
       ).length;
       const failedSends = results.filter((r) => r.status === "rejected");
 
       if (failedSends.length > 0) {
         console.error("Failed sends:", failedSends);
         toast.error(
-          `Failed to send ${failedSends.length} of ${recipients.length} emails.`
+          `Failed to send ${failedSends.length} of ${recipients.length} emails.`,
         );
       }
 
       if (successfulSends > 0) {
         toast.success(
-          `Email sent successfully to ${successfulSends} recipient(s)!`
+          `Email sent successfully to ${successfulSends} recipient(s)!`,
         );
       }
 

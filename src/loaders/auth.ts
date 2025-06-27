@@ -142,7 +142,9 @@ async function signInUser(data: LoginDto) {
 
     const { data: plan, error: planError } = await supabase
       .from("user_plan")
-      .select("id, type, startDate, endDate")
+      .select(
+        "id, type, startDate, endDate, maxAiRequests, maxResendRequests, maxContactsStored, maxTemplatesStored, maxStorageUsed",
+      )
       .eq("userId", signInData.user.id)
       .single();
 
@@ -179,7 +181,7 @@ async function requestPasswordResetEmail(email: string) {
   } catch (error) {
     console.error("Network/Unknown Error:", error);
     throw new Error(
-      "Failed to connect to the server. Check your internet connection."
+      "Failed to connect to the server. Check your internet connection.",
     );
   }
 }
@@ -199,7 +201,7 @@ async function updateUserPassword(password: string) {
   } catch (error) {
     console.error("Network/Unknown Error:", error);
     throw new Error(
-      "Failed to connect to the server. Check your internet connection."
+      "Failed to connect to the server. Check your internet connection.",
     );
   }
 }

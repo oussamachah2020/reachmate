@@ -47,6 +47,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useTemplateStore } from "@/zustand/template.store";
 import { useRouter } from "next/navigation";
 import RichTextEditor from "@/components/ui/rich-text-editor";
+import { updateTemplateUsage } from "@/functions/template-record";
 
 type FormValues = {
   templateName: string;
@@ -149,7 +150,7 @@ export default function CreateTemplatePage() {
         const styleStr = Object.entries(styles)
           .map(
             ([key, value]) =>
-              `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value}`
+              `${key.replace(/([A-Z])/g, "-$1").toLowerCase()}: ${value}`,
           )
           .join("; ");
 
@@ -219,8 +220,8 @@ export default function CreateTemplatePage() {
   const updateBlock = (blockId: string, updates: Partial<EmailBlock>) => {
     setEmailBlocks((blocks) =>
       blocks.map((block) =>
-        block.id === blockId ? { ...block, ...updates } : block
-      )
+        block.id === blockId ? { ...block, ...updates } : block,
+      ),
     );
   };
 
@@ -247,7 +248,7 @@ export default function CreateTemplatePage() {
   };
 
   const selectedBlock = emailBlocks.find(
-    (block) => block.id === selectedBlockId
+    (block) => block.id === selectedBlockId,
   );
 
   const onSubmit = async (data: FormValues) => {
@@ -267,6 +268,8 @@ export default function CreateTemplatePage() {
           console.error(error);
           return;
         }
+
+        updateTemplateUsage(user?.id || "");
 
         toast.success("Template created successfully");
         router.push("/templates");
@@ -650,7 +653,7 @@ export default function CreateTemplatePage() {
                           <Icon className="h-5 w-5" />
                           <span className="text-xs font-medium">{label}</span>
                         </Button>
-                      )
+                      ),
                     )}
                   </div>
                 </CardContent>
@@ -693,7 +696,7 @@ export default function CreateTemplatePage() {
                     ) : (
                       emailBlocks.map((block, index) => {
                         const blockType = blockTypes.find(
-                          (b) => b.type === block.type
+                          (b) => b.type === block.type,
                         );
                         const Icon = blockType?.icon || Type;
 

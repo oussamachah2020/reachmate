@@ -1,11 +1,21 @@
+import { UpdateResendUsage } from "@/functions/resend-record-tracker";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { senderName, from, replyTo, to, subject, html, cc, attachments } =
-      await req.json();
+    const {
+      senderName,
+      senderId,
+      from,
+      replyTo,
+      to,
+      subject,
+      html,
+      cc,
+      attachments,
+    } = await req.json();
 
     const toArray = Array.isArray(to) ? to : [to].filter(Boolean);
 
@@ -18,7 +28,7 @@ export async function POST(req: Request) {
     if (toArray.length === 0) {
       return new Response(
         JSON.stringify({ success: false, error: "No recipients provided" }),
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -42,7 +52,7 @@ export async function POST(req: Request) {
       console.error("Resend API error:", result.error);
       return new Response(
         JSON.stringify({ success: false, error: result.error.message }),
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -57,9 +67,11 @@ export async function POST(req: Request) {
           success: false,
           error: "Email sent, but no ID returned from Resend.",
         }),
-        { status: 500 }
+        { status: 500 },
       );
     }
+
+    UpdateResendUsage(senderId);
 
     return new Response(JSON.stringify({ success: true, id: resendEmailId }), {
       status: 200,
@@ -68,7 +80,7 @@ export async function POST(req: Request) {
     console.error("Email sending error:", error);
     return new Response(
       JSON.stringify({ success: false, error: (error as Error).message }),
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

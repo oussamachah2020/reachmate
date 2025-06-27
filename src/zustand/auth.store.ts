@@ -1,34 +1,23 @@
+// zustand/auth.store.ts
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { Session, User } from "@supabase/supabase-js";
 import Cookies from "js-cookie";
-import { PLAN } from "@/types/auth";
-
-type Sender = {
-  firstName: string;
-  lastName: string;
-  email: string;
-};
-
-type Plan = {
-  id: string;
-  type: PLAN;
-  startDate: string;
-  endDate: string;
-};
+import { Sender, Plan, Usage } from "@/types/auth"; // Import all necessary types
 
 interface AuthState {
   session: Session | null;
   user: User | null;
   plan: Plan | null;
   sender: Sender | null;
+  usage: Usage | null;
   setPlan: (value: Plan | null) => void;
   setSender: (value: Sender | null) => void;
   setAuth: (session: Session | null, user: User | null) => void;
   clearAuth: () => void;
+  setUsage: (value: Usage | null) => void;
 }
 
-// Cookie storage logic for session
 const cookieStorage = {
   getItem: (name: string) => {
     try {
@@ -46,7 +35,6 @@ const cookieStorage = {
   },
 };
 
-// Zustand store
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -54,20 +42,27 @@ export const useAuthStore = create<AuthState>()(
       sender: null,
       user: null,
       plan: null,
+      usage: null,
       setSender: (value) => set(() => ({ sender: value })),
       setPlan: (value) => set(() => ({ plan: value })),
+      setUsage: (value) => set(() => ({ usage: value })),
       setAuth: (session, user) => {
         if (session) {
           cookieStorage.setItem("auth-session", session);
         } else {
           cookieStorage.removeItem("auth-session");
         }
-
         set({ session, user });
       },
       clearAuth: () => {
         cookieStorage.removeItem("auth-session");
-        set({ session: null, user: null });
+        set({
+          session: null,
+          user: null,
+          plan: null,
+          sender: null,
+          usage: null,
+        });
       },
     }),
     {
@@ -76,8 +71,9 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         sender: state.sender,
         plan: state.plan,
+        usage: state.usage, // Persist usage state
       }),
-      storage: createJSONStorage(() => localStorage),
-    }
-  )
+      storage: createJSONStorage(() => localStorage), // This is for `partialize` data
+    },
+  ),
 );

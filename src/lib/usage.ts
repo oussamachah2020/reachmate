@@ -34,7 +34,7 @@ export async function trackUsage(
     | "templatesGenerated"
     | "templatesSaved"
     | "attachmentsStored",
-  value: number = 1
+  value: number = 1,
 ) {
   try {
     await prisma.usage.upsert({
@@ -72,7 +72,7 @@ export async function trackStorageUsage(userId: string, bytes: bigint) {
 export async function checkPlanLimits(
   userId: string,
   action: string,
-  value: number = 1
+  value: number = 1,
 ) {
   try {
     // Get user's current usage and plan
@@ -121,21 +121,18 @@ export async function checkPlanLimits(
           userData.aiRequests + value > userPlan.maxAiRequests
         ) {
           throw new Error(
-            `AI request limit exceeded. You have used ${userData.aiRequests}/${userPlan.maxAiRequests} requests this month.`
+            `AI request limit exceeded. You have used ${userData.aiRequests}/${userPlan.maxAiRequests} requests this month.`,
           );
         }
         break;
 
-      case "email_send":
-        if (
-          userPlan.maxEmailsSent !== -1 &&
-          userData.emailsSent + value > userPlan.maxEmailsSent
-        ) {
-          throw new Error(
-            `Email sending limit exceeded. You have sent ${userData.emailsSent}/${userPlan.maxEmailsSent} emails this month.`
-          );
-        }
-        break;
+      // case "email_send":
+      //   if (userPlan.maxEmailsSent !== -1) {
+      //     throw new Error(
+      //       `Email sending limit exceeded. You have sent ${userData.emailsSent}/${userPlan.maxEmailsSent} emails this month.`,
+      //     );
+      //   }
+      //   break;
 
       case "template_save":
         if (
@@ -143,7 +140,7 @@ export async function checkPlanLimits(
           userData.templatesSaved + value > userPlan.maxTemplatesStored
         ) {
           throw new Error(
-            `Template storage limit exceeded. You have ${userData.templatesSaved}/${userPlan.maxTemplatesStored} templates saved.`
+            `Template storage limit exceeded. You have ${userData.templatesSaved}/${userPlan.maxTemplatesStored} templates saved.`,
           );
         }
         break;
@@ -154,21 +151,21 @@ export async function checkPlanLimits(
           userData.contactsStored + value > userPlan.maxContactsStored
         ) {
           throw new Error(
-            `Contact storage limit exceeded. You have ${userData.contactsStored}/${userPlan.maxContactsStored} contacts stored.`
+            `Contact storage limit exceeded. You have ${userData.contactsStored}/${userPlan.maxContactsStored} contacts stored.`,
           );
         }
         break;
 
-      case "attachment_store":
-        if (
-          userPlan.maxAttachmentsStored !== -1 &&
-          userData.attachmentsStored + value > userPlan.maxAttachmentsStored
-        ) {
-          throw new Error(
-            `Attachment storage limit exceeded. You have ${userData.attachmentsStored}/${userPlan.maxAttachmentsStored} attachments stored.`
-          );
-        }
-        break;
+      // case "attachment_store":
+      //   if (
+      //     userPlan.maxAttachmentsStored !== -1 &&
+      //     userData.attachmentsStored + value > userPlan.maxAttachmentsStored
+      //   ) {
+      //     throw new Error(
+      //       `Attachment storage limit exceeded. You have ${userData.attachmentsStored}/${userPlan.maxAttachmentsStored} attachments stored.`,
+      //     );
+      //   }
+      //   break;
     }
   } catch (error) {
     throw error;
@@ -177,7 +174,7 @@ export async function checkPlanLimits(
 
 export async function checkStorageLimit(
   userId: string,
-  additionalBytes: bigint
+  additionalBytes: bigint,
 ) {
   try {
     const userData = await prisma.usage.findUnique({
@@ -203,7 +200,7 @@ export async function checkStorageLimit(
       const usedMB = Number(userData.totalStorageUsed) / (1024 * 1024);
       const limitMB = Number(userPlan.maxStorageUsed) / (1024 * 1024);
       throw new Error(
-        `Storage limit exceeded. You have used ${usedMB.toFixed(2)}MB/${limitMB}MB of storage.`
+        `Storage limit exceeded. You have used ${usedMB.toFixed(2)}MB/${limitMB}MB of storage.`,
       );
     }
   } catch (error) {
@@ -232,10 +229,8 @@ export async function getUserUsageStats(userId: string) {
     return {
       usage: {
         aiRequests: data.aiRequests,
-        emailsSent: data.emailsSent,
         templatesSaved: data.templatesSaved,
         contactsStored: data.contactsStored,
-        attachmentsStored: data.attachmentsStored,
         totalStorageUsed: data.totalStorageUsed.toString(),
       },
       limits: plan
@@ -264,8 +259,6 @@ export async function resetMonthlyUsage() {
       data: {
         aiRequests: 0,
         resendRequests: 0,
-        emailsSent: 0,
-        templatesGenerated: 0,
         // Note: Don't reset stored items (contacts, templates, attachments, storage)
         // as these are cumulative, not monthly limits
       },

@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,31 +7,31 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-        
+
 model Sender {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  firstName  String
-  lastName  String
-  email     String
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-  isAnonymous Boolean @default(false)
-  EmailSent EmailSent[]
-  Template  Template[]
-  Category  Category[]
-  Tag       Tag[]
-  Attachment Attachment[]
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName      String
+  lastName       String
+  email          String
+  avatar         String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @default(now())
+  isAnonymous    Boolean          @default(false)
+  EmailSent      EmailSent[]
+  Template       Template[]
+  Category       Category[]
+  Tag            Tag[]
+  Attachment     Attachment[]
   ScheduledEmail ScheduledEmail[]
-  UserPlan UserPlan?
-  Usage Usage?
+  UserPlan       UserPlan?
+  Usage          Usage?
 
   @@map("sender")
 }
 
 model Receiver {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  firstName  String
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName String
   lastName  String
   email     String
   EmailSent EmailSent[]
@@ -45,193 +44,184 @@ model UserPlan {
   startDate DateTime @default(now())
   endDate   DateTime @default(dbgenerated("NOW() + INTERVAL '30 days'"))
   type      PLAN     @default(FREE)
-  
+
   // Usage limits for the plan
-  maxAiRequests       Int    @default(10)    // Monthly AI requests limit
-  maxResendRequests   Int    @default(50)    // Monthly email send limit via Resend
-  maxEmailsSent       Int    @default(50)    // Total emails sent limit
-  maxContactsStored   Int    @default(100)   // Maximum contacts that can be stored
-  maxTemplatesStored  Int    @default(5)     // Maximum templates that can be saved
-  maxAttachmentsStored Int   @default(10)    // Maximum attachments that can be stored
-  maxStorageUsed      BigInt @default(104857600) // 100MB in bytes
-  
+  maxAiRequests        Int    @default(10) // Monthly AI requests limit
+  maxResendRequests    Int    @default(50) // Monthly email send limit via Resend
+  maxEmailsSent        Int    @default(50) // Total emails sent limit
+  maxContactsStored    Int    @default(100) // Maximum contacts that can be stored
+  maxTemplatesStored   Int    @default(5) // Maximum templates that can be saved
+  maxAttachmentsStored Int    @default(10) // Maximum attachments that can be stored
+  maxStorageUsed       BigInt @default(104857600) // 100MB in bytes
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userId    String    @db.Uuid @unique
-  user      Sender?    @relation(fields: [userId], references: [id])
+  userId String  @unique @db.Uuid
+  user   Sender? @relation(fields: [userId], references: [id])
 
   @@map("user_plan")
 }
 
-
 model EmailSent {
-  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sentAt     DateTime   @default(now())
-  isRead     Boolean    @default(false)
-  archived   Boolean    @default(false)
-  starred    Boolean    @default(false)
-  message    String?     
-  categoryId String?    @db.Uuid 
-  category   Category?  @relation(fields: [categoryId], references: [id])
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sentAt     DateTime  @default(now())
+  isRead     Boolean   @default(false)
+  archived   Boolean   @default(false)
+  starred    Boolean   @default(false)
+  message    String?
+  categoryId String?   @db.Uuid
+  category   Category? @relation(fields: [categoryId], references: [id])
 
-  tagId      String?    @db.Uuid 
-  tag        Tag?       @relation(fields: [tagId], references: [id])
+  tagId String? @db.Uuid
+  tag   Tag?    @relation(fields: [tagId], references: [id])
 
-  templateId String?     @db.Uuid
-  template   Template?   @relation(fields: [templateId], references: [id])
+  templateId String?   @db.Uuid
+  template   Template? @relation(fields: [templateId], references: [id])
 
-  defaultTemplateId  String?   @db.Uuid
-  defaultTemplate    DefaultTemplate? @relation(fields: [defaultTemplateId], references: [id])
+  defaultTemplateId String?          @db.Uuid
+  defaultTemplate   DefaultTemplate? @relation(fields: [defaultTemplateId], references: [id])
 
-  senderId   String     @db.Uuid
-  sender     Sender     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId String @db.Uuid
+  sender   Sender @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
-  receiverId String     @db.Uuid
-  receiver   Receiver   @relation(fields: [receiverId], references: [id])
+  receiverId String   @db.Uuid
+  receiver   Receiver @relation(fields: [receiverId], references: [id])
 
   // Add a field to store the Resend email ID
   resend_email_id String? @unique @map("resend_email_id") // Crucial for linking
   email_status    String? @map("email_status") // e.g., 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'complained'
 
-  delivered_at DateTime @default(now())
-  opened_at DateTime @default(now())
-  clicked_at DateTime @default(now())
-  bounced_at DateTime @default(now())
+  delivered_at  DateTime @default(now())
+  opened_at     DateTime @default(now())
+  clicked_at    DateTime @default(now())
+  bounced_at    DateTime @default(now())
   complained_at DateTime @default(now())
 
   attachments Attachment[]
 
   @@map("email_sent")
 }
+
 model DefaultTemplate {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   subject     String
   body        String
   description String?
-  isDefault   Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @default(now())
-  lastUsed    DateTime   @default(now())
-  usedCount   Int        @default(0)
+  isDefault   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  lastUsed    DateTime @default(now())
+  usedCount   Int      @default(0)
 
+  categoryId String?   @db.Uuid
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  categoryId  String?    @db.Uuid
-  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
   EmailSent EmailSent[]
 
   @@map("default_template")
 }
 
 model Usage {
-  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
-  aiRequests          Int      @default(0)
-  resendRequests      Int      @default(0)
-  emailsSent          Int      @default(0)
-  contactsStored      Int      @default(0)
-  templatesGenerated  Int      @default(0)
-  templatesSaved      Int      @default(0)
-  attachmentsStored   Int      @default(0)
-  totalStorageUsed    BigInt   @default(0)
-    
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  aiRequests       Int    @default(0)
+  resendRequests   Int    @default(0)
+  contactsStored   Int    @default(0)
+  templatesSaved   Int    @default(0)
+  totalStorageUsed BigInt @default(0)
 
-  userId   String   @db.Uuid @unique
-  user     Sender   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  userId String @unique @db.Uuid
+  user   Sender @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("usage")
 }
 
 model ScheduledEmail {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  senderId     String    @db.Uuid
-  sender       Sender    @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  toEmail      String
-  subject      String
-  body         String
-  scheduledAt  DateTime
-  priority     Priority
-  sent         Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  senderId    String   @db.Uuid
+  sender      Sender   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  toEmail     String
+  subject     String
+  body        String
+  scheduledAt DateTime
+  priority    Priority
+  sent        Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   @@map("scheduled_email")
 }
 
-
 model Attachment {
-  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fileUrl   String
-  fileName  String  
-  fileType  String   
-  size      Int     
-  createdAt DateTime   @default(now())
+  fileName  String
+  fileType  String
+  size      Int
+  createdAt DateTime @default(now())
 
   emailSentId String?    @db.Uuid
   emailSent   EmailSent? @relation(fields: [emailSentId], references: [id]) // FK pointing to EmailSent
 
-  userId      String?   @db.Uuid
-  sender      Sender?   @relation(fields: [userId], references: [id])
+  userId String? @db.Uuid
+  sender Sender? @relation(fields: [userId], references: [id])
 
   @@map("attachment")
 }
 
-
-
 model Template {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   subject     String
   body        String
   description String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @default(now())
-  lastUsed    DateTime   @default(now())
-  usedCount   Int        @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  lastUsed    DateTime @default(now())
+  usedCount   Int      @default(0)
 
-  senderId    String     @db.Uuid
-  sender      Sender     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId String @db.Uuid
+  sender   Sender @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
-  tagId       String?    @db.Uuid
-  tag         Tag?       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId String? @db.Uuid
+  tag   Tag?    @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
-  categoryId  String?    @db.Uuid
-  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  EmailSent EmailSent[]
+  categoryId String?     @db.Uuid
+  category   Category?   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  EmailSent  EmailSent[]
 
   @@map("template")
 }
 
-
-
 model Category {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   description String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @default(now())
-  authorId    String     @db.Uuid
-  author      Sender     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  authorId    String   @db.Uuid
+  author      Sender   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  templates   Template[] 
-  EmailSent   EmailSent[]
+  templates       Template[]
+  EmailSent       EmailSent[]
+  DefaultTemplate DefaultTemplate[]
 
   @@map("category")
-  DefaultTemplate DefaultTemplate[]
 }
 
 model Tag {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @default(now())
-  
-  authorId    String     @db.Uuid
-  author      Sender     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 
-  templates   Template[]
-  EmailSent   EmailSent[]
+  authorId String @db.Uuid
+  author   Sender @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  templates Template[]
+  EmailSent EmailSent[]
 
   @@map("tag")
 }
