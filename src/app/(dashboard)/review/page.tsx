@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/zustand/auth.store";
+import { updateAiUsage } from "@/functions/ai-usage";
 
 const EmailTemplateReviewer = () => {
   const [context, setContext] = useState<string>("");
@@ -112,6 +113,8 @@ ${emailTemplate}`;
       const data = await response.json();
       setImprovedTemplate(data.text);
       setHasResult(true);
+
+      await updateAiUsage(user?.id || "");
 
       // Start cooldown after successful submission
       startCooldown();

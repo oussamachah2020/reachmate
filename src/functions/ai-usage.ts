@@ -1,10 +1,10 @@
 import { supabase } from "@/lib/supabase/client";
 
-export async function updateResendUsage(senderId: string) {
+export async function updateAiUsage(senderId: string) {
   try {
     const { data, error: fetchError } = await supabase
       .from("usage")
-      .select("resendRequests")
+      .select("aiRequests")
       .eq("userId", senderId)
       .single();
 
@@ -13,11 +13,11 @@ export async function updateResendUsage(senderId: string) {
       return;
     }
 
-    const newCount = (data?.resendRequests || 0) + 1;
+    const newCount = (data?.aiRequests || 0) + 1;
 
     const { error: updateError } = await supabase
       .from("usage")
-      .update({ resendRequests: newCount })
+      .update({ aiRequests: newCount })
       .eq("userId", senderId);
 
     if (updateError) {
