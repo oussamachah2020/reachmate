@@ -28,6 +28,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { updateStorageUsage } from "@/functions/storage-tracker";
 
 type AttachmentsDialogProps = {
   selectedAttachments?: Attachment[];
@@ -153,6 +154,8 @@ const AttachmentsDialog: React.FC<AttachmentsDialogProps> = ({
         toast.error(`Failed to save ${file.name} to database`);
         continue;
       }
+
+      await updateStorageUsage(user?.id || "", file.size);
 
       uploaded.push({
         id: attachmentData.id,

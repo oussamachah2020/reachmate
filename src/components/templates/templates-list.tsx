@@ -30,6 +30,7 @@ import { DuplicationDto, Template } from "@/types/template";
 import { useTemplateStore } from "@/zustand/template.store";
 import { CreateTemplateDialog } from "./create-template-dialog";
 import { useRouter } from "next/navigation";
+import { updateTemplateUsage } from "@/functions/template-record";
 
 interface TemplatesListProps {
   searchQuery: string;
@@ -79,17 +80,17 @@ export function TemplatesList({
       try {
         const regex = new RegExp(
           `(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-          "gi",
+          "gi"
         );
         return text.replace(
           regex,
-          '<mark class="bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-1 rounded">$1</mark>',
+          '<mark class="bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 px-1 rounded">$1</mark>'
         );
       } catch (error) {
         return text;
       }
     },
-    [],
+    []
   );
 
   const fetchTemplates = useCallback(async () => {
@@ -106,7 +107,7 @@ export function TemplatesList({
           updatedAt,
           tag ( id, name ),
           category ( id, name )
-        `,
+        `
         )
         .order("createdAt", { ascending: false })
         .eq("senderId", user?.id);
@@ -123,7 +124,7 @@ export function TemplatesList({
           createdAt,
           updatedAt,
           category ( id, name )
-        `,
+        `
           )
           .order("createdAt", { ascending: false });
 
@@ -237,7 +238,7 @@ export function TemplatesList({
         toast.dismiss(toastId);
       }
     },
-    [user?.id],
+    [user?.id]
   );
 
   const handleTemplateDelete = useCallback(async (id: string) => {
@@ -255,6 +256,8 @@ export function TemplatesList({
       if (error) {
         throw new Error(error.message);
       }
+
+      await updateTemplateUsage(user?.id || "", "Decrease");
 
       toast.success("Template deleted successfully");
     } catch (error) {
@@ -296,7 +299,7 @@ export function TemplatesList({
                 updatedAt,
                 tag ( id, name ),
                 category ( id, name )
-              `,
+              `
               )
               .eq("id", payload.new.id)
               .single();
@@ -311,7 +314,7 @@ export function TemplatesList({
           } catch (error) {
             console.error("Error handling template insert:", error);
           }
-        },
+        }
       )
       .on(
         "postgres_changes",
@@ -334,7 +337,7 @@ export function TemplatesList({
                 updatedAt,
                 tag ( id, name ),
                 category ( id, name )
-              `,
+              `
               )
               .eq("id", payload.new.id)
               .single();
@@ -346,14 +349,14 @@ export function TemplatesList({
 
             setTemplates((prev) =>
               prev.map((t) =>
-                t.id === payload.new.id ? (data as unknown as Template) : t,
-              ),
+                t.id === payload.new.id ? (data as unknown as Template) : t
+              )
             );
             toast.success("Template updated");
           } catch (error) {
             console.error("Error handling template update:", error);
           }
-        },
+        }
       )
       .on(
         "postgres_changes",
@@ -369,7 +372,7 @@ export function TemplatesList({
           } catch (error) {
             console.error("Error handling template delete:", error);
           }
-        },
+        }
       )
       .subscribe();
 
@@ -473,7 +476,7 @@ export function TemplatesList({
                 dangerouslySetInnerHTML={{
                   __html: highlightSearchTerm(
                     getPlainTextPreview(template.body),
-                    searchQuery,
+                    searchQuery
                   ),
                 }}
               />
@@ -552,7 +555,7 @@ export function TemplatesList({
                   dangerouslySetInnerHTML={{
                     __html: highlightSearchTerm(
                       template.description,
-                      searchQuery,
+                      searchQuery
                     ),
                   }}
                 />
@@ -573,7 +576,7 @@ export function TemplatesList({
                       dangerouslySetInnerHTML={{
                         __html: highlightSearchTerm(
                           template.tag.name,
-                          searchQuery,
+                          searchQuery
                         ),
                       }}
                     />
@@ -598,7 +601,7 @@ export function TemplatesList({
                     dangerouslySetInnerHTML={{
                       __html: highlightSearchTerm(
                         template.category.name,
-                        searchQuery,
+                        searchQuery
                       ),
                     }}
                   />

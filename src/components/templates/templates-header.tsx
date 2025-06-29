@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useViewModeStore } from "@/zustand/global.store";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/zustand/auth.store";
 
 interface TemplatesHeaderProps {
   searchQuery: string;
@@ -33,7 +34,7 @@ export function TemplatesHeader({
   filteredCount,
 }: TemplatesHeaderProps) {
   const { viewMode, setViewMode } = useViewModeStore();
-  const [open, setOpen] = useState(false);
+  const { usage, plan } = useAuthStore();
   const router = useRouter();
 
   const clearSearch = () => {
@@ -41,6 +42,7 @@ export function TemplatesHeader({
   };
 
   const hasActiveFilters = searchQuery.length > 0;
+  const hitLimit = usage?.templatesSaved === plan?.maxTemplatesStored;
 
   return (
     <div className="space-y-4">
@@ -57,6 +59,7 @@ export function TemplatesHeader({
         </div>
         <Button
           onClick={() => router.push("/templates/new")}
+          disabled={hitLimit}
           className="bg-green-600 text-white hover:bg-green-700"
         >
           <Plus className="mr-2 h-4 w-4" />

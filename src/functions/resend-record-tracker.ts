@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export async function UpdateResendUsage(senderId: string) {
+export async function updateResendUsage(senderId: string) {
   try {
     await prisma.usage.upsert({
       where: { userId: senderId },

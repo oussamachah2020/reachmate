@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,7 @@ import {
   Lightbulb,
   Target,
   MessageSquare,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/zustand/auth.store";
@@ -31,18 +32,60 @@ const EmailTemplateReviewer = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [hasResult, setHasResult] = useState<boolean>(false);
-  const { user } = useAuthStore();
+  const [isCoolDown, setIsCoolDown] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
 
-  const handleSubmit = useCallback(
-    async (event: React.FormEvent) => {
-      event.preventDefault();
+  const { user, plan, usage } = useAuthStore();
 
-      setIsLoading(true);
-      setError(null);
-      setImprovedTemplate("");
-      setHasResult(false);
+  // Cooldown duration in seconds (2 minutes)
+  const COOLDOWN_DURATION = 120;
 
-      const prompt = `Given the following context and email template, please review the email for clarity, tone, conciseness, grammar, and effectiveness. Suggest improvements and provide the revised template. If no improvements are needed, state that the template is good as is, perhaps with minor suggestions.
+  // Cooldown timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isCoolDown && cooldownTime > 0) {
+      interval = setInterval(() => {
+        setCooldownTime((prev) => {
+          if (prev <= 1) {
+            setIsCoolDown(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isCoolDown, cooldownTime]);
+
+  // Format cooldown time display
+  const formatCooldownTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
+  const startCooldown = () => {
+    setIsCoolDown(true);
+    setCooldownTime(COOLDOWN_DURATION);
+  };
+
+  const hitLimit = Number(usage?.aiRequests) === Number(plan?.maxAiRequests);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    setIsLoading(true);
+    setError(null);
+    setImprovedTemplate("");
+    setHasResult(false);
+
+    const prompt = `Given the following context and email template, please review the email for clarity, tone, conciseness, grammar, and effectiveness. Suggest improvements and provide the revised template. If no improvements are needed, state that the template is good as is, perhaps with minor suggestions.
 
 Context:
 ${context}
@@ -50,38 +93,40 @@ ${context}
 Email Template:
 ${emailTemplate}`;
 
-      try {
-        const response = await fetch(`/api/gemini`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ prompt, senderId: user?.id }),
-        });
+    try {
+      const response = await fetch(`/api/gemini`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt, senderId: user?.id }),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || `HTTP error! status: ${response.status}`,
-          );
-        }
-
-        const data = await response.json();
-        setImprovedTemplate(data.text);
-        setHasResult(true);
-        toast.success("Email template reviewed successfully!");
-      } catch (err: any) {
-        console.error("Error reviewing email template:", err);
-        setError(
-          err.message || "Failed to review email template. Please try again.",
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
         );
-        toast.error("Failed to review email template");
-      } finally {
-        setIsLoading(false);
       }
-    },
-    [context, emailTemplate],
-  );
+
+      const data = await response.json();
+      setImprovedTemplate(data.text);
+      setHasResult(true);
+
+      // Start cooldown after successful submission
+      startCooldown();
+
+      toast.success("Email template reviewed successfully!");
+    } catch (err: any) {
+      console.error("Error reviewing email template:", err);
+      setError(
+        err.message || "Failed to review email template. Please try again."
+      );
+      toast.error("Failed to review email template");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(improvedTemplate);
@@ -97,11 +142,11 @@ ${emailTemplate}`;
   }, []);
 
   const isFormValid = context.trim() && emailTemplate.trim();
+  const isSubmitDisabled = isLoading || !isFormValid || isCoolDown || hitLimit;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Enhanced Header */}
         <div className="text-center mb-8 lg:mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="p-3 bg-gradient-to-br from-primary to-primary/80 rounded-2xl ">
@@ -161,6 +206,7 @@ ${emailTemplate}`;
                     placeholder="e.g., This email is to apologize to a customer for a delayed order and offer a discount on their next purchase. The tone should be professional yet empathetic."
                     className="min-h-[120px] resize-none transition-all focus:ring-2 focus:ring-primary/20"
                     rows={5}
+                    disabled={isLoading}
                   />
                   <p className="text-xs text-muted-foreground">
                     Describe the email's purpose, target audience, and desired
@@ -200,6 +246,7 @@ ${emailTemplate}`;
                     placeholder="e.g., Hi [Customer Name], We are sorry your order is delayed. Here is a 10% off for next time. Best, [Your Name]"
                     className="min-h-[160px] resize-none transition-all focus:ring-2 focus:ring-primary/20"
                     rows={7}
+                    disabled={isLoading}
                   />
                   <p className="text-xs text-muted-foreground">
                     Paste your email template or draft here
@@ -212,26 +259,41 @@ ${emailTemplate}`;
             <div className="flex gap-3">
               <Button
                 onClick={handleSubmit}
-                disabled={isLoading || !isFormValid}
-                className="flex-1 h-12 text-white bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary  transition-all duration-200"
+                disabled={isSubmitDisabled}
+                className={`flex-1 h-12 text-white transition-all duration-200 ${
+                  isCoolDown
+                    ? "bg-gray-400 hover:bg-gray-400 cursor-not-allowed opacity-60"
+                    : "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                }`}
               >
                 {isLoading ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                     Analyzing...
                   </>
+                ) : isCoolDown ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-pulse" />
+                    Please wait {formatCooldownTime(cooldownTime)}
+                  </>
                 ) : (
                   <>
                     <Wand2 className="h-4 w-4 mr-2" />
-                    Review & Improve
+                    {!hitLimit
+                      ? "Review & Improve"
+                      : "Sorry, you've hit the limit"}
                   </>
                 )}
               </Button>
               <Button
                 variant="outline"
                 onClick={handleReset}
-                disabled={isLoading}
-                className="h-12 px-6 hover:bg-muted transition-all"
+                disabled={isLoading || isCoolDown}
+                className={`h-12 px-6 transition-all ${
+                  isCoolDown
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:bg-muted"
+                }`}
               >
                 <RefreshCw className="h-4 w-4" />
               </Button>
@@ -371,6 +433,10 @@ ${emailTemplate}`;
                       <li>
                         • The more context you provide, the better the AI
                         suggestions
+                      </li>
+                      <li>
+                        • 2-minute cooldown between requests helps maintain
+                        service quality
                       </li>
                     </ul>
                   </div>

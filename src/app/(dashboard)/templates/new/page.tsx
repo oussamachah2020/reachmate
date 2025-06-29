@@ -460,7 +460,7 @@ export default function CreateTemplatePage() {
           return;
         }
 
-        updateTemplateUsage(user?.id || "");
+        await updateTemplateUsage(user?.id || "", "Increase");
 
         toast.success("Template created successfully");
         router.push("/templates");

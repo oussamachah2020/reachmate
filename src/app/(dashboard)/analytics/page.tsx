@@ -20,7 +20,6 @@ import { CategoryBreakdownChart } from "@/components/analytics/category-breakdow
 import { TemplatePerformance } from "@/components/analytics/template-performance";
 import { RecentActivity } from "@/components/analytics/recent-activity";
 import { EmailTrendsChart } from "@/components/analytics/emails-trends-chart";
-import { PerformanceComparisonChart } from "@/components/analytics/performance-comparison";
 
 interface AnalyticsData {
   overview: {
@@ -66,7 +65,6 @@ interface AnalyticsData {
     timestamp: string;
   }>;
 }
-
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30");

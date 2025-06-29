@@ -1,7 +1,4 @@
-// @/components/analytics/email-trends-chart.tsx
 "use client";
-
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -11,14 +8,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 interface EmailTrendsData {
   date: string;
@@ -34,6 +28,21 @@ interface EmailTrendsChartProps {
   isLoading?: boolean;
 }
 
+const chartConfig = {
+  sent: {
+    label: "Sent",
+    color: "hsl(142.1 76.2% 36.3%)", // green-600
+  },
+  opened: {
+    label: "Opened",
+    color: "hsl(142.1 70.6% 45.3%)", // green-500
+  },
+  responded: {
+    label: "Responded",
+    color: "hsl(138.5 76.5% 59.6%)", // green-400
+  },
+};
+
 export function EmailTrendsChart({
   data,
   selectedMetric,
@@ -47,32 +56,19 @@ export function EmailTrendsChart({
           <CardTitle>Email Performance Trends</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] bg-gray-100 rounded animate-pulse flex items-center justify-center">
-            <div className="text-gray-400">Loading chart...</div>
+          <div className="h-[300px] bg-muted/50 rounded animate-pulse flex items-center justify-center">
+            <div className="text-muted-foreground">Loading chart...</div>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  const getMetricColor = (metric: string) => {
-    switch (metric) {
-      case "sent":
-        return "#22c55e";
-      case "opened":
-        return "#3b82f6";
-      case "responded":
-        return "#f59e0b";
-      default:
-        return "#22c55e";
-    }
-  };
-
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-US", {
       month: "short",
-      year: "2-digit",
+      day: "numeric",
     });
   };
 
@@ -99,36 +95,71 @@ export function EmailTrendsChart({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={formattedData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <ChartContainer config={chartConfig} className="min-h-[300px]">
+          <AreaChart
+            accessibilityLayer
+            data={formattedData}
+            margin={{
+              left: 12,
+              right: 12,
+              top: 12,
+              bottom: 12,
+            }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="hsl(var(--muted-foreground))"
+              strokeOpacity={0.3}
+              vertical={false}
+            />
             <XAxis
               dataKey="date"
-              stroke="#666"
-              fontSize={12}
-              tick={{ fontSize: 12 }}
-            />
-            <YAxis stroke="#666" fontSize={12} tick={{ fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{
-                background: "white",
-                border: "1px solid #e2e8f0",
-                borderRadius: "8px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tick={{
+                fontSize: 12,
+                fill: "hsl(var(--muted-foreground))",
               }}
-              labelFormatter={(label) => `Date: ${label}`}
-              formatter={(value, name) => [value, name]}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tick={{
+                fontSize: 12,
+                fill: "hsl(var(--muted-foreground))",
+              }}
+            />
+            <ChartTooltip
+              cursor={{
+                stroke: "hsl(var(--muted-foreground))",
+                strokeWidth: 1,
+                strokeDasharray: "3 3",
+              }}
+              content={<ChartTooltipContent indicator="dot" />}
             />
             <Area
-              type="monotone"
               dataKey={selectedMetric}
-              stroke={getMetricColor(selectedMetric)}
-              strokeWidth={2}
-              fill={getMetricColor(selectedMetric)}
-              fillOpacity={0.1}
+              type="natural"
+              fill={`var(--color-${selectedMetric})`}
+              fillOpacity={0.15}
+              stroke={`var(--color-${selectedMetric})`}
+              strokeWidth={2.5}
+              dot={{
+                fill: `var(--color-${selectedMetric})`,
+                strokeWidth: 2,
+                r: 4,
+              }}
+              activeDot={{
+                r: 6,
+                stroke: `var(--color-${selectedMetric})`,
+                strokeWidth: 2,
+                fill: "hsl(var(--background))",
+              }}
             />
           </AreaChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );

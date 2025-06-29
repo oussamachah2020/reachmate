@@ -51,7 +51,7 @@ export function RecentEmails() {
             sender(id, firstName, lastName, email), 
             receiver(id, email), 
             attachment(id, fileUrl, fileName, fileType),
-            template(id, body, subject)`
+            template(id, body, subject), default_template(id, body, subject)`
           )
           .eq("senderId", user?.id)
           .eq("archived", false)
@@ -235,11 +235,16 @@ export function RecentEmails() {
                         : "text-muted-foreground"
                     }`}
                   >
-                    {email?.template?.subject}
+                    {email?.template?.subject ||
+                      email.default_template?.subject}
                   </p>
 
                   <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {getPlainTextPreview(email?.template?.body || "")}
+                    {getPlainTextPreview(
+                      email?.template?.body ||
+                        email.default_template?.body ||
+                        ""
+                    )}
                   </p>
 
                   {/* Tags and category */}

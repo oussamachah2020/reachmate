@@ -149,7 +149,7 @@ export default function ComposeEmailPage() {
         reader.readAsDataURL(file);
       });
 
-      updateStorageUsage(user?.id || "", file.size);
+      await updateStorageUsage(user?.id || "", file.size);
 
       uploaded.push({
         id: "",

@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { ReceiverEmailSelect } from "./receiver-email-creatble-select";
 import AttachmentsDialog from "./attachments-dialog";
 import type { Attachment } from "@/types/inbox";
+import { updateStorageUsage } from "@/functions/storage-tracker";
 
 // Define Zod schema for form validation
 const emailSchema = z.string().email("Invalid email address").trim();
@@ -58,7 +59,7 @@ const multipleEmailSchema = z.string().refine(
     const emails = value.split(";").map((email) => email.trim());
     return emails.every((email) => emailSchema.safeParse(email).success);
   },
-  { message: "All email addresses must be valid" },
+  { message: "All email addresses must be valid" }
 );
 
 const formSchema = z
@@ -76,7 +77,7 @@ const formSchema = z
       if (data.to || data.toMultiple) return true;
       return false;
     },
-    { message: "At least one recipient is required", path: ["to"] },
+    { message: "At least one recipient is required", path: ["to"] }
   );
 
 type FormValues = z.infer<typeof formSchema>;
@@ -103,20 +104,22 @@ const EmailSendingDialog = () => {
   >([]);
   const [recipientError, setRecipientError] = useState("");
   const [recipientMode, setRecipientMode] = useState<"single" | "multiple">(
-    "single",
+    "single"
   );
   const [toEmail, setToEmail] = useState<EmailOption | null>(null);
   const [ccEmail, setCcEmail] = useState<EmailOption | null>(null);
   const [multipleRecipients, setMultipleRecipients] = useState<string[]>([]);
   const [multipleCcRecipients, setMultipleCcRecipients] = useState<string[]>(
-    [],
+    []
   );
   const [currentToInput, setCurrentToInput] = useState("");
   const [currentCcInput, setCurrentCcInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { user, sender } = useAuthStore();
+  const { user, sender, usage, plan } = useAuthStore();
+
+  const hitLimit = usage?.resendRequests === plan?.maxAiRequests;
 
   const {
     register,
@@ -184,7 +187,7 @@ const EmailSendingDialog = () => {
 
   const removeToRecipient = (emailToRemove: string) => {
     setMultipleRecipients(
-      multipleRecipients.filter((email) => email !== emailToRemove),
+      multipleRecipients.filter((email) => email !== emailToRemove)
     );
   };
 
@@ -206,7 +209,7 @@ const EmailSendingDialog = () => {
 
   const removeCcRecipient = (emailToRemove: string) => {
     setMultipleCcRecipients(
-      multipleCcRecipients.filter((email) => email !== emailToRemove),
+      multipleCcRecipients.filter((email) => email !== emailToRemove)
     );
   };
 
@@ -367,20 +370,20 @@ const EmailSendingDialog = () => {
       const results = await Promise.allSettled(sendPromises);
 
       const successfulSends = results.filter(
-        (r) => r.status === "fulfilled",
+        (r) => r.status === "fulfilled"
       ).length;
       const failedSends = results.filter((r) => r.status === "rejected");
 
       if (failedSends.length > 0) {
         console.error("Failed sends:", failedSends);
         toast.error(
-          `Failed to send ${failedSends.length} of ${recipients.length} emails.`,
+          `Failed to send ${failedSends.length} of ${recipients.length} emails.`
         );
       }
 
       if (successfulSends > 0) {
         toast.success(
-          `Email sent successfully to ${successfulSends} recipient(s)!`,
+          `Email sent successfully to ${successfulSends} recipient(s)!`
         );
       }
 
@@ -467,6 +470,8 @@ const EmailSendingDialog = () => {
         reader.readAsDataURL(file);
       });
 
+      await updateStorageUsage(user?.id || "", file.size);
+
       uploaded.push({
         id: "",
         name: file.name,
@@ -524,7 +529,10 @@ const EmailSendingDialog = () => {
     <div>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Button className="bg-primary text-white shadow-lg hover:shadow-xl transition-all duration-200">
+          <Button
+            disabled={hitLimit}
+            className="bg-primary text-white shadow-lg hover:shadow-xl transition-all duration-200"
+          >
             <PlusIcon className="h-4 w-4 mr-2" />
             Compose Email
           </Button>

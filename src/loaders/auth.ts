@@ -10,8 +10,6 @@ const url =
 
 async function signUpUser(data: RegisterDto) {
   try {
-    console.log({ url, firstName: data.firstName, lastName: data.lastName });
-
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,

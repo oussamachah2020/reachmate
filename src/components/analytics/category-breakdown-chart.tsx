@@ -99,7 +99,9 @@ export function CategoryBreakdownChart({
               <span className="text-sm text-gray-600 truncate">
                 {category.name}
               </span>
-              <span className="text-sm font-medium">{category.value}%</span>
+              <span className="text-sm font-medium">
+                {Number(category?.value?.toFixed(0))}%
+              </span>
             </div>
           ))}
         </div>

@@ -176,6 +176,7 @@ export function Header() {
   const router = useRouter();
   const [loadingUsage, setLoadingUsage] = useState(true);
 
+
   useEffect(() => {
     const fetchUserData = async () => {
       setLoadingUsage(true);
@@ -183,7 +184,7 @@ export function Header() {
         const { data: usage, error: usageError } = await supabase
           .from("usage")
           .select(
-            "aiRequests, resendRequests,contactsStored, templatesSaved, totalStorageUsed ",
+            "aiRequests, resendRequests, contactsStored, templatesSaved, totalStorageUsed"
           )
           .eq("userId", user?.id)
           .single();
@@ -204,7 +205,29 @@ export function Header() {
     if (user && !usage) {
       fetchUserData();
     }
-  }, [user, usage]);
+
+    const channel = supabase
+      .channel(`usage-updates-${user?.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "usage",
+          filter: `userId=eq.${user?.id}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            setUsage(payload.new as any);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   async function signOut() {
     if (user?.is_anonymous === true) {
@@ -221,7 +244,6 @@ export function Header() {
     if (signOutError) {
       console.error("Error signing out from Supabase:", signOutError.message);
     }
-    router.push("/");
   }
 
   // Determine avatar source and fallback display

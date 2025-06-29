@@ -1,13 +1,33 @@
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase/client";
 
-export async function updateTemplateUsage(senderId: string) {
+type Action = "Increase" | "Decrease";
+
+export async function updateTemplateUsage(senderId: string, action: Action) {
   try {
-    await prisma.usage.update({
-      where: { userId: senderId },
-      data: {
-        templatesSaved: { increment: 1 },
-      },
-    });
+    const { data, error: fetchError } = await supabase
+      .from("usage")
+      .select("templatesSaved")
+      .eq("userId", senderId)
+      .single();
+
+    if (fetchError) {
+      console.error("Fetch error:", fetchError);
+      return;
+    }
+
+    const newCount =
+      action === "Increase"
+        ? (data?.templatesSaved || 0) + 1
+        : (data?.templatesSaved || 0) - 1;
+
+    const { error: updateError } = await supabase
+      .from("usage")
+      .update({ templatesSaved: newCount })
+      .eq("userId", senderId);
+
+    if (updateError) {
+      console.error("Update error:", updateError);
+    }
 
     return "record updated";
   } catch (error) {
