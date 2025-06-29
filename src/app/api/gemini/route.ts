@@ -1,8 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Access your API key from environment variables
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -20,7 +18,7 @@ export async function POST(req: Request) {
     if (!prompt) {
       return NextResponse.json(
         { error: "Prompt is required." },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
