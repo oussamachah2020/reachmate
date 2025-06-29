@@ -38,9 +38,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ text: generatedText });
   } catch (error) {
     console.error("Error calling Gemini API:", error);
-    return NextResponse.json(
-      { error: "Failed to generate content." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error }, { status: 500 });
   }
 }

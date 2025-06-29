@@ -419,6 +419,7 @@ const EmailSendingDialog = () => {
         }
       }
 
+
       reset();
       setToEmail(null);
       setCcEmail(null);
