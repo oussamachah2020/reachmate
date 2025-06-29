@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+
+const prisma = new PrismaClient();
 
 // Access your API key from environment variables
 const API_KEY = process.env.GEMINI_API_KEY;
